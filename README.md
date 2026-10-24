@@ -22,7 +22,7 @@ Demo logins (password `demo1234`) are listed on the sign-in page when `DEMO=1`.
 | M1 Landing website: home, features, pricing, demo, signup + trial | done |
 | M2 SaaS console: buildings, plans, subscriptions, SaaS invoices, SMS credits, leads, team, feature flags | done |
 | M3 Property setup: flats map, owners, tenants, to-let approval, agency portfolio | done |
-| M4 Service charge | next |
+| M4 Service charge | done |
 | M5 Cash collection | planned |
 | M6 Finance and assets | planned |
 | M7 Staff and payroll | planned |

@@ -3,7 +3,7 @@ from sqlalchemy import select
 
 from .db import Base, SessionLocal, engine
 from . import models  # noqa: F401
-from .models.core import Membership, Organization, Property, User
+from .models.core import Membership, Organization, Property, User, now
 from .security import hash_password
 
 PASSWORD = "demo1234"
@@ -273,7 +273,87 @@ def seed_units(db, ctx):
         m.unit_id = a801.id
 
 
-EXTRA_SEEDS: list = [seed_plans, seed_saas_demo, seed_units]  # later modules append their seed functions here
+def seed_billing(db, ctx):
+    from datetime import date
+    from random import Random
+    from .models.billing import ChargeRule, Invoice, InvoiceLine, Message, Payment
+    from .models.property import Occupancy, Unit
+    rnd = Random(21)
+    periods = ["2026-05", "2026-06", "2026-07", "2026-08", "2026-09", "2026-10"]
+    methods = ["bkash"] * 9 + ["nagad"] * 3 + ["bank"] * 3 + ["cash"] * 5
+    trs = db.scalar(select(User).where(User.email == "treasurer@flatwise.demo"))
+    for key in ("sunrise", "lake", "green"):
+        prop = ctx[key]
+        rules = [(ChargeRule(property_id=prop.id, name="Service charge", name_bn="সার্ভিস চার্জ", kind="per_sqft", amount=200), "sq"),
+                 (ChargeRule(property_id=prop.id, name="Generator", name_bn="জেনারেটর", kind="flat", amount=40000), "f"),
+                 (ChargeRule(property_id=prop.id, name="Lift", name_bn="লিফট", kind="flat", amount=30000), "f"),
+                 (ChargeRule(property_id=prop.id, name="Water", name_bn="পানি", kind="flat", amount=25000), "f")]
+        for r, _ in rules:
+            db.add(r)
+        db.flush()
+        units = db.scalars(select(Unit).where(Unit.property_id == prop.id).order_by(Unit.id)).all()
+        chronic = {units[i].id for i in range(3, len(units), 11)}
+        n_rc = 0
+        for per in periods:
+            y, m = int(per[:4]), int(per[5:])
+            current = per == periods[-1]
+            for u in units:
+                total, lines = 0, []
+                for r, _ in rules:
+                    a = int(round(r.amount * u.area_sqft)) if r.kind == "per_sqft" else r.amount
+                    lines.append((r, a)); total += a
+                inv = Invoice(property_id=prop.id, unit_id=u.id, period=per, number=f"INV-{prop.id}-{per}-{u.number}", issue_date=date(y, m, 1), due_date=date(y, m, 10), total=total)
+                db.add(inv); db.flush()
+                for r, a in lines:
+                    db.add(InvoiceLine(invoice_id=inv.id, description=r.name, description_bn=r.name_bn, amount=a))
+                chance = 0.62 if current else 0.93
+                if u.id in chronic and per >= "2026-07":
+                    chance = 0
+                x = rnd.random()
+                if x < chance:
+                    amt = total
+                elif x < chance + 0.05 and chance > 0:
+                    amt = total // 2
+                else:
+                    continue
+                n_rc += 1
+                meth = rnd.choice(methods)
+                day = min(rnd.randint(2, 22 if current else 14), 24 if current else 28)
+                db.add(Payment(property_id=prop.id, invoice_id=inv.id, unit_id=u.id, amount=amt, method=meth,
+                               trx_id=f"{'BK' if meth == 'bkash' else 'NG' if meth == 'nagad' else 'TR'}{rnd.randint(10**8, 10**9 - 1)}" if meth != "cash" else "",
+                               paid_on=date(y, m, day), status="verified", verified_by=trs.id if trs else None, verified_at=now(), receipt_no=f"RC-{prop.id}-{n_rc:05d}"))
+                inv.paid = amt
+                inv.status = "paid" if amt >= total else "partial"
+        db.flush()
+    # pending payments waiting for the treasurer (Sunrise)
+    sun = ctx["sunrise"]
+    tasnim = db.scalar(select(User).where(User.email == "tenant@flatwise.demo"))
+    for number, meth, who in (("B-302", "bkash", tasnim.id if tasnim else None), ("A-203", "nagad", None), ("B-105", "bkash", None)):
+        u = db.scalar(select(Unit).where(Unit.property_id == sun.id, Unit.number == number))
+        if not u:
+            continue
+        inv = db.scalar(select(Invoice).where(Invoice.unit_id == u.id, Invoice.period == "2026-10"))
+        if not inv:
+            continue
+        for old in db.scalars(select(Payment).where(Payment.invoice_id == inv.id)):
+            db.delete(old)
+        inv.paid, inv.status = 0, "open"
+        db.flush()
+        db.add(Payment(property_id=sun.id, invoice_id=inv.id, unit_id=u.id, amount=inv.total - inv.paid, method=meth, trx_id=f"{'BK' if meth == 'bkash' else 'NG'}{rnd.randint(10**8, 10**9 - 1)}",
+                       paid_on=date(2026, 10, 23), status="pending", submitted_by=who))
+    # a few reminders already sent, in Bangla
+    od = db.scalars(select(Invoice).where(Invoice.property_id == sun.id, Invoice.period == "2026-09", Invoice.status != "paid").limit(6)).all()
+    for inv in od:
+        o = db.scalar(select(Occupancy).where(Occupancy.unit_id == inv.unit_id, Occupancy.active).order_by(Occupancy.kind.desc()))
+        if not o:
+            continue
+        db.add(Message(property_id=sun.id, unit_id=inv.unit_id, to_name=o.name_bn or o.name, to_phone=o.phone, template="due_o7", lang="bn",
+                       body=f"সানরাইজ টাওয়ার: {inv.period} মাসের সার্ভিস চার্জ BDT {inv.total // 100:,} বকেয়া। অনুগ্রহ করে পরিশোধ করুন।",
+                       status="sent", idem_key=f"seed-{inv.id}-o7", sent_at=now()))
+    db.flush()
+
+
+EXTRA_SEEDS: list = [seed_plans, seed_saas_demo, seed_units, seed_billing]  # later modules append their seed functions here
 
 if __name__ == "__main__":
     run()

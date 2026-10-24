@@ -1,0 +1,13 @@
+{ "module": "m4-service-charge", "shots": [
+  { "name": "01-collections-overview-treasurer", "path": "/app/billing", "as": "treasurer", "full": true },
+  { "name": "02-invoices", "path": "/app/billing", "as": "treasurer", "click": ["[role=tab]:has-text('Invoices')"] },
+  { "name": "03-payments-to-verify", "path": "/app/billing", "as": "treasurer", "click": ["[role=tab]:has-text('Payments')"] },
+  { "name": "04-dues-ageing", "path": "/app/billing", "as": "padmin", "click": ["[role=tab]:has-text('Dues')"], "full": true },
+  { "name": "05-charge-rules", "path": "/app/billing", "as": "padmin", "click": ["[role=tab]:has-text('Charges')"] },
+  { "name": "06-tenant-my-dues", "path": "/app/pay", "as": "tenant", "full": true },
+  { "name": "07-tenant-i-paid-form", "path": "/app/pay", "as": "tenant", "click": ["button:has-text('I paid')"] },
+  { "name": "08-receipt", "path": "/app/receipt/1", "as": "treasurer" },
+  { "name": "09-sms-reminders-log", "path": "/app/messages", "as": "padmin" },
+  { "name": "10-collections-bangla-night", "path": "/app/billing", "as": "president", "lang": "bn", "theme": "dark", "full": true },
+  { "name": "11-my-dues-mobile", "path": "/app/pay", "as": "owner2", "w": 390, "h": 844, "full": true }
+] }
