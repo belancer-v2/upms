@@ -84,6 +84,8 @@ def test_payroll_excludes_agency_staff_and_staff_filter(client):
     # moving a person to direct puts them back on payroll lists
     assert client.put(f"/api/agency/staff/{sid}/posting", json={"agency_id": None}, headers=pa).status_code == 200
     assert [r for r in client.get("/api/staff", headers=tr).json() if r["id"] == sid]
+    assert client.put(f"/api/agency/staff/{sid}/posting", json={"agency_id": a["id"], "emp_no": "T-2"}, headers=pa).status_code == 200      # back to the agency, so later tests see the usual 4 direct staff
+    assert not [r for r in client.get("/api/staff", headers=tr).json() if r["id"] == sid]
 
 
 def test_roster_conflict_warnings(client):

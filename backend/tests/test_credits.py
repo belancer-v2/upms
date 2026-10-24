@@ -140,6 +140,7 @@ def test_email_deliver_spends_credit_and_fails_visibly(client):
         before = email_balance(db, oid)
         m = deliver(db, oid, Message(property_id=pid, channel="email", to_email="a@b.test", template="notice", body="Hi", idem_key="em-ok-1"))
         db.add(m)
+        db.flush()
         assert m.status == "sent" and email_balance(db, oid) == before - 1
         n = deliver(db, oid, Message(property_id=pid, channel="email", to_email="", template="notice", body="Hi", idem_key="em-none-1"))
         assert n.status == "failed" and n.error == "No email address" and email_balance(db, oid) == before - 1
