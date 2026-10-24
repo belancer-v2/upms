@@ -1,0 +1,11 @@
+{ "module": "m2-saas-console", "shots": [
+  { "name": "01-overview-super-admin", "path": "/app/saas", "as": "super", "full": true },
+  { "name": "02-overview-sales-bangla-night", "path": "/app/saas", "as": "sales", "lang": "bn", "theme": "dark", "full": true },
+  { "name": "03-buildings-list", "path": "/app/saas/buildings", "as": "admin" },
+  { "name": "04-building-detail-past-due", "path": "/app/saas/buildings/8", "as": "super", "full": true },
+  { "name": "05-building-detail-trial-night", "path": "/app/saas/buildings/11", "as": "sales", "theme": "dark", "full": true },
+  { "name": "06-saas-invoices-finance", "path": "/app/saas/invoices", "as": "finance" },
+  { "name": "07-plans-and-prices", "path": "/app/saas/plans", "as": "super", "full": true },
+  { "name": "08-leads-board-sales", "path": "/app/saas/leads", "as": "sales" },
+  { "name": "09-saas-team-bangla", "path": "/app/saas/staff", "as": "super", "lang": "bn" }
+] }

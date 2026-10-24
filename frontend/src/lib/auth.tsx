@@ -2,12 +2,12 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { api, store } from "./api";
 
-export type Prop = { id: number; name: string; name_bn: string; city: string; org_id: number; org_name: string; roles: string[] };
+export type Prop = { id: number; name: string; name_bn: string; city: string; org_id: number; org_name: string; roles: string[]; features: string[]; plan: string; sub_status: string; org_status: string };
 export type Me = { id: number; name: string; name_bn: string; email: string; phone: string; lang: string; saas_role: string | null };
 type AuthState = {
   ready: boolean; user: Me | null; properties: Prop[]; prop: Prop | null; roles: string[];
   setProp: (id: number) => void; login: (email: string, password: string) => Promise<void>; logout: () => void;
-  has: (...r: string[]) => boolean; saas: (...r: string[]) => boolean; reload: () => Promise<void>;
+  has: (...r: string[]) => boolean; feature: (key: string) => boolean; saas: (...r: string[]) => boolean; reload: () => Promise<void>;
 };
 const Ctx = createContext<AuthState>(null as unknown as AuthState);
 
@@ -42,6 +42,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const value = useMemo<AuthState>(() => ({
     ready, user, properties, prop, roles, setProp, login, logout, reload,
     has: (...r) => r.some((x) => roles.includes(x)) || user?.saas_role === "SUPER_ADMIN" || user?.saas_role === "SAAS_ADMIN",
+    feature: (k) => !!prop?.features.includes(k),
     saas: (...r) => !!user?.saas_role && (r.length === 0 || r.includes(user.saas_role)),
   }), [ready, user, properties, prop, roles, reload]);
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

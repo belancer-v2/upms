@@ -62,3 +62,50 @@ class Lead(Base):
     status: Mapped[str] = mapped_column(String(12), default="new", index=True)  # new | contacted | demo | trial | won | lost
     owner_id: Mapped[int | None] = mapped_column(Integer, nullable=True)       # SaaS sales user working this lead
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
+class SaasInvoice(Base):
+    """What FlatWise bills its customers (subscription, setup, SMS packs)."""
+    __tablename__ = "saas_invoices"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    number: Mapped[str] = mapped_column(String(24), unique=True)
+    org_id: Mapped[int] = mapped_column(ForeignKey("organizations.id"), index=True)
+    kind: Mapped[str] = mapped_column(String(12), default="subscription")  # subscription | setup | sms
+    period: Mapped[str] = mapped_column(String(8), default="")             # 2026-10, or 2026 for yearly
+    description: Mapped[str] = mapped_column(String(200), default="")
+    amount: Mapped[int] = mapped_column(Integer)                           # paisa
+    status: Mapped[str] = mapped_column(String(10), default="issued", index=True)  # issued | paid | void
+    issued_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    due_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    paid_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    method: Mapped[str] = mapped_column(String(16), default="")
+    trx_id: Mapped[str] = mapped_column(String(40), default="")
+
+
+class SmsLedger(Base):
+    """Prepaid SMS credits per organization. Append-only: balance is the sum of deltas."""
+    __tablename__ = "sms_ledger"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    org_id: Mapped[int] = mapped_column(ForeignKey("organizations.id"), index=True)
+    delta: Mapped[int] = mapped_column(Integer)
+    reason: Mapped[str] = mapped_column(String(60), default="")
+    at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    by_user_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+
+class LeadNote(Base):
+    __tablename__ = "lead_notes"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    lead_id: Mapped[int] = mapped_column(ForeignKey("leads.id"), index=True)
+    user_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    text: Mapped[str] = mapped_column(Text)
+    at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
+class FeatureOverride(Base):
+    """Per-organization switch that beats the plan (for example a goodwill extra during a trial)."""
+    __tablename__ = "feature_overrides"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    org_id: Mapped[int] = mapped_column(ForeignKey("organizations.id"), index=True)
+    key: Mapped[str] = mapped_column(String(30))
+    enabled: Mapped[bool] = mapped_column(default=True)

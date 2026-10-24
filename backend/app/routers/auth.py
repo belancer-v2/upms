@@ -9,6 +9,7 @@ from ..db import get_db
 from ..deps import current_user
 from ..models.core import Membership, Organization, Property, User
 from ..security import make_token, verify_password
+from ..services.entitlements import current_subscription, org_features
 
 router = APIRouter(prefix="/api", tags=["auth"])
 
@@ -47,7 +48,11 @@ def me_payload(db: Session, user: User) -> dict:
                  "phone": user.phone, "lang": user.lang, "saas_role": user.saas_role},
         "properties": [
             {"id": p.id, "name": p.name, "name_bn": p.name_bn, "city": p.city, "org_id": p.org_id,
-             "org_name": orgs[p.org_id].name if p.org_id in orgs else "", "roles": roles_by_prop.get(p.id, [])}
+             "org_name": orgs[p.org_id].name if p.org_id in orgs else "", "roles": roles_by_prop.get(p.id, []),
+             "features": sorted(org_features(db, p.org_id)),
+             "plan": (current_subscription(db, p.org_id).plan_key if current_subscription(db, p.org_id) else ""),
+             "sub_status": (current_subscription(db, p.org_id).status if current_subscription(db, p.org_id) else ""),
+             "org_status": orgs[p.org_id].status if p.org_id in orgs else ""}
             for p in sorted(props.values(), key=lambda x: x.id)
         ],
     }

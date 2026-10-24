@@ -4,6 +4,7 @@ export type NavItem = {
   roles?: string[];   // customer roles (any of). Omit = every signed-in building user.
   saas?: string[];    // SaaS staff roles (any of). Omit = not shown to SaaS staff.
   anyone?: boolean;   // shown to everyone signed in
+  feature?: string;   // the plan feature this item needs
 };
 
 export const COMMITTEE = ["PRESIDENT", "SECRETARY", "TREASURER", "MEMBER"];
@@ -12,6 +13,12 @@ export const ALL_SAAS = ["SUPER_ADMIN", "SAAS_ADMIN", "SAAS_FINANCE", "SAAS_SALE
 
 export const NAV: NavItem[] = [
   { key: "nav.dashboard", href: "/app", icon: "home", group: "main", anyone: true },
+  { key: "nav.saas.overview", href: "/app/saas", icon: "chart", group: "saas", saas: ALL_SAAS },
+  { key: "nav.saas.buildings", href: "/app/saas/buildings", icon: "building", group: "saas", saas: ALL_SAAS },
+  { key: "nav.saas.leads", href: "/app/saas/leads", icon: "inbox", group: "saas", saas: ["SUPER_ADMIN", "SAAS_ADMIN", "SAAS_SALES"] },
+  { key: "nav.saas.invoices", href: "/app/saas/invoices", icon: "receipt", group: "saas", saas: ["SUPER_ADMIN", "SAAS_ADMIN", "SAAS_FINANCE"] },
+  { key: "nav.saas.plans", href: "/app/saas/plans", icon: "tag", group: "saas", saas: ALL_SAAS },
+  { key: "nav.saas.staff", href: "/app/saas/staff", icon: "users", group: "saas", saas: ["SUPER_ADMIN", "SAAS_ADMIN"] },
   { key: "nav.roles", href: "/app/roles", icon: "shield", group: "system", anyone: true },
   { key: "nav.audit", href: "/app/audit", icon: "list", group: "system", roles: [...MANAGERS, "PRESIDENT", "AUDITOR"], saas: ["SUPER_ADMIN", "SAAS_ADMIN"] },
   { key: "nav.profile", href: "/app/profile", icon: "user", group: "system", anyone: true },

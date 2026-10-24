@@ -13,7 +13,7 @@ const GROUPS = ["main", "saas", "building", "money", "people", "comms", "system"
 export function Icon({ name }: { name: string }) { return <svg viewBox="0 0 24 24" aria-hidden><path d={ICONS[name] ?? ICONS.home} /></svg>; }
 
 export function Shell({ children }: { children: ReactNode }) {
-  const { ready, user, properties, prop, setProp, has, saas, logout } = useAuth();
+  const { ready, user, properties, prop, setProp, has, saas, logout, feature } = useAuth();
   const { t, pick } = useT();
   const path = usePathname(); const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -21,7 +21,9 @@ export function Shell({ children }: { children: ReactNode }) {
   useEffect(() => setOpen(false), [path]);
   if (!ready || !user) return <div className="empty" style={{ paddingTop: 120 }}>{t("common.loading")}</div>;
 
-  const visible = NAV.filter((i) => i.anyone || (i.roles && prop && has(...i.roles)) || (i.saas && saas(...i.saas)));
+  const hrefs = NAV.map((i) => i.href);
+  const isOn = (h: string) => path === h || (h !== "/app" && path.startsWith(h + "/") && !hrefs.some((o) => o.length > h.length && (path === o || path.startsWith(o + "/"))));
+  const visible = NAV.filter((i) => i.anyone || (i.roles && prop && has(...i.roles) && (!i.feature || feature(i.feature))) || (i.saas && saas(...i.saas)));
   return (
     <div className="shell">
       <aside className={`sidebar ${open ? "open" : ""}`}>
@@ -33,7 +35,7 @@ export function Shell({ children }: { children: ReactNode }) {
             return (
               <div className="nav-group" key={g}>
                 <div className="nav-title">{t(`nav.group.${g}`)}</div>
-                {items.map((i) => <Link key={i.href} href={i.href} className={path === i.href || (i.href !== "/app" && path.startsWith(i.href)) ? "on" : ""}><Icon name={i.icon} />{t(i.key)}</Link>)}
+                {items.map((i) => <Link key={i.href} href={i.href} className={isOn(i.href) ? "on" : ""}><Icon name={i.icon} />{t(i.key)}</Link>)}
               </div>
             );
           })}
@@ -42,7 +44,7 @@ export function Shell({ children }: { children: ReactNode }) {
       <div className="main">
         <header className="topbar">
           <button className="icon-btn menu-btn" aria-label="Menu" onClick={() => setOpen(!open)}><svg viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18" /></svg></button>
-          {properties.length > 0 && (
+          {properties.length > 0 && !path.startsWith("/app/saas") && (
             <div className="row" style={{ gap: 8 }}>
               <span className="small muted">{t("shell.building")}</span>
               {properties.length > 1

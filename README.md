@@ -20,8 +20,8 @@ Demo logins (password `demo1234`) are listed on the sign-in page when `DEMO=1`.
 |---|---|
 | M0 Foundation: design system, BN/EN, day/night, login, roles, tenancy, audit | done |
 | M1 Landing website: home, features, pricing, demo, signup + trial | done |
-| M2 SaaS console | next |
-| M3 Property setup | planned |
+| M2 SaaS console: buildings, plans, subscriptions, SaaS invoices, SMS credits, leads, team, feature flags | done |
+| M3 Property setup | next |
 | M4 Service charge | planned |
 | M5 Cash collection | planned |
 | M6 Finance and assets | planned |

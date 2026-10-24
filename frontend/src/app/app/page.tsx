@@ -1,4 +1,5 @@
 "use client";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Card, Chip, PageHead } from "@/components/ui";
 import { api, ftime } from "@/lib/api";
@@ -9,7 +10,8 @@ import { ROLE_MODULES } from "@/lib/i18n/roles";
 type Log = { id: number; at: string; who: string; action: string; entity: string };
 
 export default function Dashboard() {
-  const { t, pick } = useT(); const { user, prop, roles } = useAuth();
+  const { t, pick } = useT(); const { user, prop, roles } = useAuth(); const router = useRouter();
+  useEffect(() => { if (user?.saas_role) router.replace("/app/saas"); }, [user, router]);
   const [log, setLog] = useState<Log[] | null>(null);
   useEffect(() => { api<Log[]>("/audit?limit=6").then(setLog).catch(() => setLog([])); }, [prop?.id]);
   if (!user) return null;

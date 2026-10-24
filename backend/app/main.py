@@ -4,7 +4,7 @@ from fastapi import FastAPI
 
 from .db import Base, engine
 from . import models  # noqa: F401  (registers tables)
-from .routers import auth, core, public
+from .routers import auth, core, public, saas
 
 
 @asynccontextmanager
@@ -17,6 +17,7 @@ app = FastAPI(title="FlatWise API", version="0.1.0", lifespan=lifespan)
 app.include_router(auth.router)
 app.include_router(core.router)
 app.include_router(public.router)
+app.include_router(saas.router)
 
 
 @app.get("/api/health")

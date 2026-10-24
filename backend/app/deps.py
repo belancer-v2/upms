@@ -5,7 +5,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from .db import get_db
-from .models.core import Membership, Property, User
+from .models.core import Membership, Organization, Property, User
+from .services.entitlements import org_features
 from .security import read_token
 
 SAAS_ALL_ACCESS = {"SUPER_ADMIN", "SAAS_ADMIN"}
@@ -36,6 +37,7 @@ class Ctx:
     roles: set[str] = field(default_factory=set)
     unit_ids: set[int] = field(default_factory=set)
     saas_staff: bool = False
+    features: set[str] = field(default_factory=set)
 
     def has(self, *roles: str) -> bool:
         return self.saas_staff or bool(self.roles & set(roles))
@@ -43,6 +45,11 @@ class Ctx:
     def need(self, *roles: str) -> None:
         if not self.has(*roles):
             raise HTTPException(403, "Your role cannot do this")
+
+    def feature(self, key: str) -> None:
+        """Plan gate. Raises 402 so the app can show an upgrade message."""
+        if key not in self.features:
+            raise HTTPException(402, f"Your plan does not include '{key}'")
 
 
 def property_ctx(x_property_id: int = Header(default=0), user: User = Depends(current_user),
@@ -61,4 +68,7 @@ def property_ctx(x_property_id: int = Header(default=0), user: User = Depends(cu
     staff = user.saas_role in SAAS_ALL_ACCESS
     if not roles and not staff:
         raise HTTPException(403, "No access to this building")
-    return Ctx(user=user, property=prop, roles=roles, unit_ids=units, saas_staff=staff)
+    org = db.get(Organization, prop.org_id)
+    if org and org.status == "suspended" and not user.saas_role:
+        raise HTTPException(403, "This building's account is suspended. Please contact FlatWise.")
+    return Ctx(user=user, property=prop, roles=roles, unit_ids=units, saas_staff=staff, features=org_features(db, prop.org_id))

@@ -3,7 +3,7 @@ from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from ..db import get_db
-from ..deps import current_user
+from ..deps import Ctx, current_user, property_ctx
 from ..models.core import AuditLog, Membership, Property, User
 
 router = APIRouter(prefix="/api", tags=["core"])
@@ -29,3 +29,11 @@ def audit_list(limit: int = 50, user: User = Depends(current_user), db: Session 
     names = {u.id: u.name for u in db.scalars(select(User))}
     return [{"id": a.id, "at": a.at.isoformat(), "who": names.get(a.user_id, "system"), "action": a.action,
              "entity": a.entity, "entity_id": a.entity_id} for a in db.scalars(q)]
+
+
+@router.get("/property")
+def property_info(ctx: Ctx = Depends(property_ctx)):
+    """The building the caller is working in, with their roles and the features their plan includes."""
+    p = ctx.property
+    return {"id": p.id, "name": p.name, "name_bn": p.name_bn, "address": p.address, "city": p.city, "floors": p.floors,
+            "roles": sorted(ctx.roles), "features": sorted(ctx.features)}
