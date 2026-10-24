@@ -4,7 +4,7 @@ from fastapi import FastAPI
 
 from .db import Base, engine
 from . import models  # noqa: F401  (registers tables)
-from .routers import auth, billing, cash, core, finance, property as property_router, public, saas
+from .routers import auth, billing, cash, core, finance, staff as staff_router, property as property_router, public, saas
 
 
 @asynccontextmanager
@@ -22,6 +22,7 @@ app.include_router(property_router.router)
 app.include_router(billing.router)
 app.include_router(cash.router)
 app.include_router(finance.router)
+app.include_router(staff_router.router)
 
 
 @app.get("/api/health")

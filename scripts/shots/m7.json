@@ -1,0 +1,11 @@
+{ "module": "m7-staff-payroll", "shots": [
+  { "name": "01-staff-register-admin", "path": "/app/staff", "as": "padmin", "full": true },
+  { "name": "02-nid-vault-reveal-logged", "path": "/app/staff", "as": "president", "click": ["button:has-text('Show full ID')", ".modal button:has-text('Show full ID')"] },
+  { "name": "03-add-staff", "path": "/app/staff", "as": "secretary", "click": ["button:has-text('Add staff')"] },
+  { "name": "04-salary-sheets", "path": "/app/staff", "as": "treasurer", "click": ["[role=tab]:has-text('Payroll')"] },
+  { "name": "05-draft-sheet-with-eid-bonus", "path": "/app/staff", "as": "treasurer", "click": ["[role=tab]:has-text('Payroll')", "tr:has-text('2026-10') button:has-text('View')", "button:has-text('Add Eid bonus')"], "full": true },
+  { "name": "06-president-approves-sheet", "path": "/app/staff", "as": "president", "click": ["[role=tab]:has-text('Payroll')", "tr:has-text('2026-10') button:has-text('View')"], "full": true },
+  { "name": "07-payslip", "path": "/app/payslip/1", "as": "treasurer" },
+  { "name": "08-staff-bangla-night", "path": "/app/staff", "as": "president", "lang": "bn", "theme": "dark", "full": true },
+  { "name": "09-staff-mobile", "path": "/app/staff", "as": "padmin", "w": 390, "h": 844, "full": true }
+] }

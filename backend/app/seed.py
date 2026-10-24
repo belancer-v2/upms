@@ -422,7 +422,8 @@ def seed_finance(db, ctx):
         expense("utilities", f"Electricity, common areas ({mn})", rnd.randint(16000, 21000), date(y, m, 14), vend["desco"], approvers=[pres], method="bank")
         expense("utilities", f"Water bill ({mn})", rnd.randint(5500, 7500), date(y, m, 16), vend["wasa"], approvers=[pres], method="bank")
         expense("fuel", f"Generator diesel ({mn})", rnd.randint(9000, 15000), date(y, m, rnd.randint(5, 25)), vend["fuel"], approvers=[pres], method=rnd.choice(["cash", "bkash"]))
-        expense("salary", f"Caretaker, guard and cleaner salary ({mn})", 38000, date(y, m, 28 if m < 10 else 24), None, approvers=[pres], method="bank")
+        if m <= 8:   # from September salaries run through the payroll module
+            expense("salary", f"Caretaker, guard and cleaner salary ({mn})", 38000, date(y, m, 28), None, approvers=[pres], method="bank")
         expense("services", f"Security service ({mn})", 14000, date(y, m, 5), vend["guard"], approvers=[pres], method="bank")
         if m in (6, 8, 9):
             expense("repairs", rnd.choice(["Corridor light replacement", "Pump motor repair", "Gate repair", "Intercom fix"]), rnd.randint(3500, 18000), date(y, m, rnd.randint(8, 22)), vend["elec"], approvers=[pa], method=rnd.choice(methods))
@@ -448,7 +449,34 @@ def seed_finance(db, ctx):
     db.flush()
 
 
-EXTRA_SEEDS: list = [seed_plans, seed_saas_demo, seed_units, seed_billing, seed_cash, seed_finance]
+def seed_payroll(db, ctx):
+    from datetime import date
+    from .models.staff import SalaryLine, SalarySheet, Staff
+    from .services import ledger, vault
+    sun = ctx["sunrise"]
+    tr = db.scalar(select(User).where(User.email == "treasurer@flatwise.demo"))
+    pres = db.scalar(select(User).where(User.email == "president@flatwise.demo"))
+    P = 100
+    people = [("Rahim Mia", "রহিম মিয়া", "caretaker", "01711000111", 14000, date(2021, 2, 1), "1985123456789"), ("Karim Uddin", "করিম উদ্দিন", "guard", "01711000222", 9000, date(2022, 6, 15), "1990654321098"),
+              ("Jabbar Ali", "জব্বার আলী", "guard", "01711000333", 9000, date(2023, 1, 10), "1988112233445"), ("Shefali Begum", "শেফালী বেগম", "cleaner", "01711000444", 6000, date(2024, 4, 1), "1993778899001")]
+    st = []
+    for n, bn, role, ph, sal, j, nid in people:
+        s = Staff(property_id=sun.id, name=n, name_bn=bn, role=role, phone=ph, joined=j, salary=sal * P, nid_enc=vault.seal(nid), nid_last4=nid[-4:])
+        db.add(s); st.append(s)
+    db.flush()
+    sep = SalarySheet(property_id=sun.id, period="2026-09", status="paid", created_by=tr.id, approved_by=pres.id, paid_on=date(2026, 9, 28), method="bank")
+    db.add(sep); db.flush()
+    for s in st:
+        db.add(SalaryLine(sheet_id=sep.id, staff_id=s.id, base=s.salary))
+    ledger.post(db, sun.id, sep.paid_on, "Salaries 2026-09", [("5030", sum(s.salary for s in st), 0), ("1020", 0, sum(s.salary for s in st))], "payroll", sep.id)
+    octo = SalarySheet(property_id=sun.id, period="2026-10", status="draft", created_by=tr.id)
+    db.add(octo); db.flush()
+    for s in st:
+        db.add(SalaryLine(sheet_id=octo.id, staff_id=s.id, base=s.salary))
+    db.flush()
+
+
+EXTRA_SEEDS: list = [seed_plans, seed_saas_demo, seed_units, seed_billing, seed_cash, seed_finance, seed_payroll]
 
 if __name__ == "__main__":
     run()

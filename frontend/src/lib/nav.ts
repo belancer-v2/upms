@@ -21,6 +21,7 @@ export const NAV: NavItem[] = [
   { key: "nav.saas.staff", href: "/app/saas/staff", icon: "users", group: "saas", saas: ["SUPER_ADMIN", "SAAS_ADMIN"] },
   { key: "nav.units", href: "/app/units", icon: "building", group: "building", roles: ["PROPERTY_ADMIN", "AGENCY_MANAGER", "PRESIDENT", "SECRETARY", "TREASURER", "MEMBER", "AUDITOR", "CARETAKER", "GUARD"] },
   { key: "nav.people", href: "/app/people", icon: "users", group: "building", roles: ["PROPERTY_ADMIN", "AGENCY_MANAGER", "PRESIDENT", "SECRETARY", "TREASURER", "MEMBER", "AUDITOR", "CARETAKER"] },
+  { key: "nav.staff", href: "/app/staff", icon: "users", group: "people", roles: [...MANAGERS, "PRESIDENT", "SECRETARY", "TREASURER", "MEMBER", "AUDITOR"], feature: "staff" },
   { key: "nav.myflat", href: "/app/my-flat", icon: "home", group: "building", roles: ["FLAT_OWNER", "TENANT", "OWNER_REP"] },
   { key: "nav.portfolio", href: "/app/portfolio", icon: "chart", group: "building", roles: ["AGENCY_MANAGER"], saas: ["SUPER_ADMIN", "SAAS_ADMIN"] },
   { key: "nav.building", href: "/app/building", icon: "tag", group: "building", roles: ["PROPERTY_ADMIN", "AGENCY_MANAGER"] },
