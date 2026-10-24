@@ -13,11 +13,13 @@ import { noticesDict } from "./i18n/notices";
 import { onboardingDict } from "./i18n/onboarding";
 import { requestsDict } from "./i18n/requests";
 import { profilesDict } from "./i18n/profiles";
+import { rentalDict } from "./i18n/rental";
 
 type D = Record<string, string>;
 const modules: { en: D; bn: D }[] = [core as unknown as { en: D; bn: D }, rolesDict as unknown as { en: D; bn: D }, site as unknown as { en: D; bn: D }, feat as unknown as { en: D; bn: D }, saasDict as unknown as { en: D; bn: D }, propertyDict as unknown as { en: D; bn: D }, billingDict as unknown as { en: D; bn: D }, gatewayDict as unknown as { en: D; bn: D }, cashDict as unknown as { en: D; bn: D }, financeDict as unknown as { en: D; bn: D }, budgetDict as unknown as { en: D; bn: D }, staffDict as unknown as { en: D; bn: D }, noticesDict as unknown as { en: D; bn: D }, onboardingDict as unknown as { en: D; bn: D }, profilesDict as unknown as { en: D; bn: D }];
 
 modules.push(requestsDict as unknown as { en: D; bn: D });
+modules.push(rentalDict as unknown as { en: D; bn: D });
 
 export const dict: { en: D; bn: D } = {
   en: Object.assign({}, ...modules.map((m) => m.en)),
