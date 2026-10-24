@@ -33,6 +33,13 @@ Demo logins (password `demo1234`) are listed on the sign-in page when `DEMO=1`.
 | M12 Monthly budget setting | done |
 | M13 Payment gateway, sandbox only | done |
 | M14 Owner rental records add-on | done |
+| M15 Visitor log | done |
+| M16 Community hall and amenity booking | done |
+| M17 Parking allocated with the flat | done |
+| M18 Security and cleaner agency, duty roster | done |
+| M19 SMS and email credit top-up | done |
+| M20 SaaS email promotion and email screens | done |
+| M21 SaaS reports and FlatWise invoices | done |
 
 ## User types
 SaaS team: Super Admin, SaaS Admin, SaaS Finance, SaaS Sales, SaaS User.
