@@ -24,7 +24,7 @@ export function GatewayPay({ inv, opts, onClose }: { inv: Inv; opts: GwOptions; 
     <p className="hint">{t("gw.choose")}</p>
     <div className="stack" style={{ gap: 8, marginBottom: 12 }}>{opts.providers.map((k) => {
       const f = payerPays ? fee : 0;
-      return <label key={k} className="row between" style={{ padding: "10px 12px", border: `1px solid ${p === k ? "var(--brand)" : "var(--line)"}`, borderRadius: 10, cursor: "pointer", background: "var(--card)" }}>
+      return <label key={k} className="row between" style={{ padding: "10px 12px", border: `1px solid ${p === k ? "var(--brand)" : "var(--line)"}`, borderRadius: 10, cursor: "pointer", background: "var(--surface)" }}>
         <span className="row"><input type="radio" name="gw" checked={p === k} onChange={() => setP(k)} /> <b>{t(`gw.p.${k}`)}</b></span>
         <span className="small muted">{f ? t("gw.fee_line", { f: money(f) }) : t("gw.no_fee")}</span></label>; })}</div>
     <div className="row between" style={{ marginBottom: 12 }}><span>{t("gw.you_pay")}</span><b>{money(inv.balance + (payerPays ? fee : 0))}</b></div>

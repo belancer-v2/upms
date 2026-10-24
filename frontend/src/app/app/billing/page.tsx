@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { BillChip, stColor, type Inv, type Pay } from "@/components/billbits";
 import { PayForm } from "@/components/PayForm";
+import { GatewayCard } from "@/components/GatewayCard";
 import { UnitMap, type Unit } from "@/components/UnitParts";
 import { Bar, Btn, Card, Chip, DataTable, Empty, Field, Modal, PageHead, Stat, Tabs, useToast } from "@/components/ui";
 import { api, fdate, money } from "@/lib/api";
@@ -57,7 +58,7 @@ export default function Billing() {
             <div key={x.period}><div className="row between small"><b>{x.period}</b><span className="muted">{money(x.collected)} / {money(x.billed)} · {x.pct}%</span></div>
               <div className="bar" style={{ width: `${(x.billed / maxBilled) * 100}%` }}><i style={{ width: `${x.pct}%` }} /></div></div>))}</div></Card>
         <Card><h3>{t("bill.methods")}</h3>
-          <div className="stack" style={{ gap: 10, marginTop: 12 }}>{(["bkash", "nagad", "bank", "cash"] as const).map((m) => { const v = sum.methods[m] ?? 0; const tot = Object.values(sum.methods).reduce((a, b) => a + b, 0) || 1; return (
+          <div className="stack" style={{ gap: 10, marginTop: 12 }}>{(["bkash", "nagad", "card", "bank", "cash"] as const).map((m) => { const v = sum.methods[m] ?? 0; const tot = Object.values(sum.methods).reduce((a, b) => a + b, 0) || 1; return (
             <div key={m}><div className="row between small"><b>{t(`bill.m.${m}`)}</b><span className="muted">{money(v)} · {Math.round((100 * v) / tot)}%</span></div><Bar pct={(100 * v) / tot} /></div>); })}</div></Card>
       </div>
       <Card><div className="row between wrap"><h3>{t("bill.map")} · {p}</h3>
@@ -95,7 +96,8 @@ export default function Billing() {
       <div className="row between"><p className="hint" style={{ margin: 0 }}>{t("bill.rule.note")}</p>{money_roles && <Btn onClick={() => setRule({ kind: "flat", active: true })}>{t("bill.rule.add")}</Btn>}</div>
       <DataTable rows={rules} pageSize={10} cols={[{ key: "n", head: t("common.name"), render: (r) => <b>{pick(r.name, r.name_bn || r.name)}</b> }, { key: "k", head: t("bill.rule.kind"), render: (r) => t(r.kind === "flat" ? "bill.rule.flat" : "bill.rule.sqft") },
         { key: "a", head: t("common.amount"), num: true, render: (r) => money(r.amount) + (r.kind === "per_sqft" ? " / sq ft" : "") }, { key: "s", head: "", render: (r) => <Chip tone={r.active ? "ok" : "mute"}>{r.active ? t("bill.rule.active") : "–"}</Chip> },
-        { key: "e", head: "", render: (r) => money_roles ? <Btn size="sm" variant="ghost" onClick={() => setRule(r)}>{t("common.edit")}</Btn> : null }]} /></div>)}
+        { key: "e", head: "", render: (r) => money_roles ? <Btn size="sm" variant="ghost" onClick={() => setRule(r)}>{t("common.edit")}</Btn> : null }]} />
+      {money_roles && feature("gateway") && <GatewayCard onSaved={(m) => toast.show(m)} />}</div>)}
 
     {gen && <GenModal onClose={() => setGen(false)} onDone={(n) => { setGen(false); toast.show(n ? t("bill.gen_done", { n }) : t("bill.gen_none")); load(); }} />}
     {rec && <RecordModal inv={rec} onClose={() => setRec(null)} onDone={() => { setRec(null); toast.show(t("bill.recorded")); load(); }} />}

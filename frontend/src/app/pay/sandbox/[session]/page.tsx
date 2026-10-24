@@ -28,7 +28,7 @@ export default function Sandbox({ params }: { params: Promise<{ session: string 
         <span className="small muted">{s.unit} · {s.period} · {s.invoice}</span>{s.fee > 0 && s.charged > s.amount && <div className="small muted">{t("gw.fee_line", { f: money(s.fee) })}</div>}</div>
       {!done && <><p className="hint">{t("gw.sb.note")}</p>
         <div className="row"><Btn onClick={() => send(s.pay)} disabled={busy}>{t("gw.sb.pay")}</Btn><Btn variant="outline" onClick={() => send(s.fail)} disabled={busy}>{t("gw.sb.fail")}</Btn></div></>}
-      {done && <><p role="status" style={{ fontWeight: 600, color: done === "paid" ? "var(--ok)" : "var(--bad)" }}>{done === "paid" ? t("gw.sb.paid") : t("gw.sb.failed")}</p><a className="btn" href="/app/pay">{t("gw.sb.back")}</a></>}
+      {done && <><p role="status" style={{ fontWeight: 600, color: done === "paid" ? "var(--ok)" : "var(--bad)" }}>{done === "paid" ? t("gw.sb.paid") : t("gw.sb.failed")}</p><a className="btn btn-primary" href="/app/pay">{t("gw.sb.back")}</a></>}
       {err && <p className="error" role="alert">{err}</p>}</div>}
   </div>);
 }

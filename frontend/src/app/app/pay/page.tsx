@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { BillChip, type Inv } from "@/components/billbits";
 import { PayForm } from "@/components/PayForm";
+import { GatewayPay, useGateway } from "@/components/GatewayPay";
 import { Btn, Card, Empty, PageHead, Stat, useToast } from "@/components/ui";
 import { api, fdate, money } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -9,7 +10,7 @@ import { useT } from "@/lib/i18n";
 
 export default function Pay() {
   const { t, pick } = useT(); const { prop } = useAuth(); const toast = useToast();
-  const [rows, setRows] = useState<Inv[] | null>(null); const [open, setOpen] = useState<Inv | null>(null); const [cash, setCash] = useState<{ id: number; unit: string; amount: number; status: string }[]>([]); const [detail, setDetail] = useState<Record<number, Inv>>({});
+  const [rows, setRows] = useState<Inv[] | null>(null); const [open, setOpen] = useState<Inv | null>(null); const [cash, setCash] = useState<{ id: number; unit: string; amount: number; status: string }[]>([]); const [detail, setDetail] = useState<Record<number, Inv>>({}); const [gwInv, setGwInv] = useState<Inv | null>(null); const gw = useGateway(prop?.id);
   const load = useCallback(async () => { const r = await api<Inv[]>("/billing/invoices"); setRows(r); const d: Record<number, Inv> = {}; for (const i of r.slice(0, 6)) d[i.id] = await api(`/billing/invoices/${i.id}`); setDetail(d); try { setCash((await api<any[]>("/cash/entries")).filter((e) => e.status === "pending")); } catch { setCash([]); } }, []);
   useEffect(() => { load(); }, [load, prop?.id]);
   if (!rows) return <p className="muted">{t("common.loading")}</p>;
@@ -22,11 +23,12 @@ export default function Pay() {
     {rows.length === 0 && <Card><Empty>{t("pay.none")}</Empty></Card>}
     <div className="stack">{rows.slice(0, 6).map((i) => { const d = detail[i.id]; return (
       <Card key={i.id}><div className="row between wrap"><div><h3 style={{ margin: 0 }}>{i.period} · {i.unit}</h3><span className="small muted">{t("bill.due")} {fdate(i.due_date)}</span></div>
-        <div className="row"><BillChip s={i.status} /><b>{money(i.total)}</b>{i.status !== "paid" && i.status !== "void" && <Btn size="sm" onClick={() => setOpen(i)}>{t("pay.i_paid")}</Btn>}</div></div>
+        <div className="row"><BillChip s={i.status} /><b>{money(i.total)}</b>{i.status !== "paid" && i.status !== "void" && <>{gw?.enabled && i.balance > 0 && <Btn size="sm" onClick={() => setGwInv(i)}>{t("gw.pay_now")}</Btn>}<Btn size="sm" variant={gw?.enabled ? "outline" : "primary"} onClick={() => setOpen(i)}>{t("pay.i_paid")}</Btn></>}</div></div>
         {d?.lines && <div style={{ marginTop: 10 }}>{d.lines.map((l, k) => <div key={k} className="row between small" style={{ padding: "4px 0", borderTop: "1px solid var(--line)" }}><span>{pick(l.description, l.description_bn || l.description)}</span><span>{money(l.amount)}</span></div>)}
           {d.payments?.map((p) => <div key={p.id} className="row between small" style={{ padding: "4px 0" }}><span>{fdate(p.paid_on)} · {t(`bill.m.${p.method}`)} <BillChip s={p.status} /></span>
             <span>{money(p.amount)} {p.status === "verified" && <a href={`/app/receipt/${p.id}`}>{t("bill.receipt")}</a>}</span></div>)}</div>}</Card>); })}</div>
     {open && <PayForm inv={open} staff={false} onClose={() => setOpen(null)} onDone={() => { setOpen(null); toast.show(t("bill.submitted")); load(); }} />}
+    {gwInv && gw && <GatewayPay inv={gwInv} opts={gw} onClose={() => setGwInv(null)} />}
     {toast.node}
   </>);
 }
