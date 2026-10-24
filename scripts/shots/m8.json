@@ -1,0 +1,12 @@
+{ "module": "m8-notices-policies", "shots": [
+  { "name": "01-notices-secretary-reach", "path": "/app/notices", "as": "secretary", "click": ["h3:has-text('Water supply')"], "full": true },
+  { "name": "02-who-has-not-read", "path": "/app/notices", "as": "secretary", "click": ["h3:has-text('Water supply')", "button:has-text('Who has not read')"] },
+  { "name": "03-new-notice-bangla-tab", "path": "/app/notices", "as": "secretary", "click": ["button:has-text('New notice')", ".modal [role=tab]:has-text('বাংলা')"] },
+  { "name": "04-tenant-inbox", "path": "/app/notices", "as": "tenant", "full": true },
+  { "name": "05-sms-link-page-no-login", "path": "/n/MO1UCg7sCEx_qEMC", "w": 430, "h": 760 },
+  { "name": "06-policies-owner-accepts", "path": "/app/policies", "as": "owner2", "full": true },
+  { "name": "07-policy-tenant-accept-again", "path": "/app/policies", "as": "tenant", "full": true },
+  { "name": "08-policy-acceptance-history", "path": "/app/policies", "as": "president", "click": ["button:has-text('History')"] },
+  { "name": "09-notices-bangla-night", "path": "/app/notices", "as": "president", "lang": "bn", "theme": "dark", "full": true },
+  { "name": "10-notices-mobile", "path": "/app/notices", "as": "owner2", "w": 390, "h": 844, "full": true }
+] }

@@ -476,7 +476,71 @@ def seed_payroll(db, ctx):
     db.flush()
 
 
-EXTRA_SEEDS: list = [seed_plans, seed_saas_demo, seed_units, seed_billing, seed_cash, seed_finance, seed_payroll]
+def seed_notices(db, ctx):
+    import secrets
+    from datetime import datetime, timedelta, timezone
+    from random import Random
+    from .models.notice import Notice, Policy, PolicyAcceptance, PolicyVersion, Receipt
+    from .models.property import Occupancy, Unit
+    rnd = Random(41)
+    sun = ctx["sunrise"]
+    sec = db.scalar(select(User).where(User.email == "secretary@flatwise.demo"))
+    pres = db.scalar(select(User).where(User.email == "president@flatwise.demo"))
+    pa = db.scalar(select(User).where(User.email == "padmin@flatwise.demo"))
+    units = {u.id: u.number for u in db.scalars(select(Unit).where(Unit.property_id == sun.id))}
+    people = {"owners": [], "tenants": []}
+    for o in db.scalars(select(Occupancy).where(Occupancy.unit_id.in_(list(units)), Occupancy.active)):
+        people["owners" if o.kind == "owner" else "tenants"].append((o.name, units[o.unit_id], o.phone, o.user_id))
+    committee = [(u.name, "", u.phone, u.id) for u in db.scalars(select(User).where(User.email.in_([f"{k}@flatwise.demo" for k in ("president", "secretary", "treasurer", "member")])))]
+    items = [
+        ("Water supply off tomorrow, 9 am to 1 pm", "আগামীকাল সকাল ৯টা থেকে দুপুর ১টা পানি বন্ধ থাকবে", "The overhead tank will be cleaned. Please store water tonight. Supply returns by 1 pm.", "ওভারহেড ট্যাংক পরিষ্কার করা হবে। অনুগ্রহ করে আজ রাতে পানি জমিয়ে রাখুন। দুপুর ১টার মধ্যে সরবরাহ ফিরবে।", "all", "urgent", True, 1, 0.82),
+        ("Annual general meeting, Friday 7 Nov, 5 pm", "বার্ষিক সাধারণ সভা, শুক্রবার ৭ নভেম্বর, বিকাল ৫টা", "All flat owners are invited to the AGM in the ground floor hall. Agenda: yearly accounts, budget 2027, lift replacement.", "সকল ফ্ল্যাট মালিককে নিচতলার হলরুমে বার্ষিক সাধারণ সভায় আমন্ত্রণ। আলোচ্যসূচি: বার্ষিক হিসাব, ২০২৭ বাজেট, লিফট প্রতিস্থাপন।", "owners", "normal", True, 3, 0.64),
+        ("Lift maintenance, Block A, Saturday", "শনিবার ব্লক এ লিফটের রক্ষণাবেক্ষণ", "Block A lifts will be off from 10 am to 2 pm. Please use Block B lifts.", "ব্লক এ লিফট সকাল ১০টা থেকে দুপুর ২টা বন্ধ থাকবে। অনুগ্রহ করে ব্লক বি লিফট ব্যবহার করুন।", "all", "normal", False, 5, 0.9),
+        ("Reminder for tenants: guest and parking rules", "ভাড়াটিয়াদের জন্য স্মরণ: অতিথি ও পার্কিং নিয়ম", "Guests must be registered with the guard. Please park only in your flat's marked space.", "অতিথিদের গার্ডের কাছে নিবন্ধন করতে হবে। শুধু আপনার ফ্ল্যাটের নির্দিষ্ট জায়গায় গাড়ি রাখুন।", "tenants", "normal", False, 8, 0.55),
+        ("Committee meeting notes, October", "কমিটি সভার কার্যবিবরণী, অক্টোবর", "Approved: lift motor overhaul quotation review, generator service schedule, security vendor renewal.", "অনুমোদিত: লিফট মোটর ওভারহলের কোটেশন পর্যালোচনা, জেনারেটর সার্ভিসের সময়সূচি, নিরাপত্তা সংস্থার নবায়ন।", "committee", "normal", False, 12, 1.0),
+    ]
+    for title, tbn, body, bbn, aud, pri, pin, days, rate in items:
+        n = Notice(property_id=sun.id, title=title, title_bn=tbn, body=body, body_bn=bbn, audience=aud, priority=pri, pinned=pin, created_by=(sec if aud != "committee" else pres).id, created_at=datetime.now(timezone.utc) - timedelta(days=days))
+        db.add(n); db.flush()
+        rec = {"all": people["owners"] + people["tenants"] + committee, "owners": people["owners"], "tenants": people["tenants"], "committee": committee}[aud]
+        seen = set()
+        for name, unit, phone, uid in rec:
+            if uid and uid in seen:
+                continue
+            seen.add(uid)
+            r = Receipt(notice_id=n.id, name=name, unit=unit, phone=phone, user_id=uid, token=secrets.token_urlsafe(12), sms_at=n.created_at if phone and aud != "committee" else None)
+            if rnd.random() < rate:
+                r.read_at, r.read_via = n.created_at + timedelta(hours=rnd.randint(1, 60)), ("app" if uid and rnd.random() < .5 else "link")
+            db.add(r)
+        db.flush()
+    # leave a few demo residents unread so their inbox shows what is new
+    for r in db.scalars(select(Receipt).join(User, User.id == Receipt.user_id).where(User.email.in_(["owner@flatwise.demo", "tenant@flatwise.demo", "owner2@flatwise.demo"]), Receipt.notice_id.in_(select(Notice.id).where(Notice.title.like("Water%"))))):
+        r.read_at, r.read_via = None, ""
+    # policies
+    def policy(title, bn, versions):
+        p = Policy(property_id=sun.id, title=title, title_bn=bn)
+        db.add(p); db.flush()
+        out = []
+        for i, (body, bbn, note) in enumerate(versions, 1):
+            v = PolicyVersion(policy_id=p.id, version=i, body=body, body_bn=bbn, change_note=note, published_by=pres.id, published_at=datetime.now(timezone.utc) - timedelta(days=200 - i * 90))
+            db.add(v); db.flush(); out.append(v)
+        return out
+    house = policy("House rules", "ভবনের নিয়মাবলী", [
+        ("1. Quiet hours are 10 pm to 7 am.\n2. Garbage goes in the bins on each floor landing.\n3. No storage in stairwells.\n4. Pets must be leashed in common areas.", "১. রাত ১০টা থেকে সকাল ৭টা শান্ত থাকার সময়।\n২. প্রতি তলার ল্যান্ডিংয়ের বিনে ময়লা ফেলুন।\n৩. সিঁড়িতে মালপত্র রাখা যাবে না।\n৪. সাধারণ এলাকায় পোষা প্রাণী বেঁধে রাখুন।", "First version"),
+        ("1. Quiet hours are 10 pm to 7 am.\n2. Garbage goes in the bins on each floor landing, wet and dry apart.\n3. No storage in stairwells.\n4. Pets must be leashed in common areas.\n5. Renovation work only 9 am to 5 pm, never on Fridays.", "১. রাত ১০টা থেকে সকাল ৭টা শান্ত থাকার সময়।\n২. ময়লা ভেজা ও শুকনো আলাদা করে ল্যান্ডিংয়ের বিনে ফেলুন।\n৩. সিঁড়িতে মালপত্র রাখা যাবে না।\n৪. সাধারণ এলাকায় পোষা প্রাণী বেঁধে রাখুন।\n৫. সংস্কারের কাজ সকাল ৯টা থেকে বিকাল ৫টা, শুক্রবার নয়।", "Added renovation hours and waste sorting")])
+    guest = policy("Guest and parking policy", "অতিথি ও পার্কিং নীতি", [("Guests register at the gate. Parking only in the marked space of your flat. Visitor cars may stay up to 4 hours.", "অতিথিরা গেটে নিবন্ধন করবেন। শুধু নিজের ফ্ল্যাটের নির্দিষ্ট জায়গায় গাড়ি রাখুন। অতিথির গাড়ি সর্বোচ্চ ৪ ঘণ্টা থাকতে পারবে।", "First version")])
+    accepters = [db.scalar(select(User).where(User.email == f"{k}@flatwise.demo")) for k in ("owner", "owner2", "ownerrep", "president", "secretary", "treasurer", "member")]
+    for u in accepters:
+        db.add(PolicyAcceptance(version_id=house[0].id, user_id=u.id))
+        db.add(PolicyAcceptance(version_id=guest[0].id, user_id=u.id))
+    for u in accepters[:4]:
+        db.add(PolicyAcceptance(version_id=house[1].id, user_id=u.id))
+    tenant = db.scalar(select(User).where(User.email == "tenant@flatwise.demo"))
+    db.add(PolicyAcceptance(version_id=house[0].id, user_id=tenant.id))
+    db.flush()
+
+
+EXTRA_SEEDS: list = [seed_plans, seed_saas_demo, seed_units, seed_billing, seed_cash, seed_finance, seed_payroll, seed_notices]
 
 if __name__ == "__main__":
     run()

@@ -30,6 +30,8 @@ export const NAV: NavItem[] = [
   { key: "nav.cash", href: "/app/cash", icon: "cash", group: "money", roles: [...MANAGERS, "CARETAKER", "TREASURER"], feature: "caretaker_app" },
   { key: "nav.pay", href: "/app/pay", icon: "receipt", group: "money", roles: ["FLAT_OWNER", "TENANT", "OWNER_REP"], feature: "billing" },
   { key: "nav.messages", href: "/app/messages", icon: "mail", group: "comms", roles: [...MANAGERS, "PRESIDENT", "SECRETARY", "TREASURER", "AUDITOR"], feature: "reminders" },
+  { key: "nav.notices", href: "/app/notices", icon: "megaphone", group: "comms", roles: ["PROPERTY_ADMIN", "AGENCY_MANAGER", "PRESIDENT", "SECRETARY", "TREASURER", "MEMBER", "AUDITOR", "CARETAKER", "GUARD", "FLAT_OWNER", "TENANT", "OWNER_REP"], feature: "notices" },
+  { key: "nav.policies", href: "/app/policies", icon: "file", group: "comms", roles: ["PROPERTY_ADMIN", "AGENCY_MANAGER", "PRESIDENT", "SECRETARY", "TREASURER", "MEMBER", "AUDITOR", "CARETAKER", "GUARD", "FLAT_OWNER", "TENANT", "OWNER_REP"], feature: "policies" },
   { key: "nav.roles", href: "/app/roles", icon: "shield", group: "system", anyone: true },
   { key: "nav.audit", href: "/app/audit", icon: "list", group: "system", roles: [...MANAGERS, "PRESIDENT", "AUDITOR"], saas: ["SUPER_ADMIN", "SAAS_ADMIN"] },
   { key: "nav.profile", href: "/app/profile", icon: "user", group: "system", anyone: true },

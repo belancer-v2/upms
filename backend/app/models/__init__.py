@@ -6,3 +6,4 @@ from .billing import ChargeRule, Invoice, InvoiceLine, Message, Payment  # noqa:
 from .cash import CashEntry, Remittance  # noqa
 from .finance import Account, Asset, Budget, Expense, Journal, JournalLine, Vendor  # noqa
 from .staff import NidView, SalaryLine, SalarySheet, Staff  # noqa
+from .notice import Notice, Policy, PolicyAcceptance, PolicyVersion, Receipt  # noqa
