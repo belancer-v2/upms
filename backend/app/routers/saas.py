@@ -12,6 +12,7 @@ from ..deps import current_user, require_saas
 from ..models.core import AuditLog, Membership, Organization, Property, SAAS_ROLES, User, now
 from ..models.saas import FeatureOverride, Lead, LeadNote, Plan, SaasInvoice, SmsLedger, Subscription
 from ..security import hash_password
+from ..services import saas_docs as _m21  # M21: history events and credit notes
 from ..services.entitlements import ALL_FEATURES, current_subscription, org_features, sms_balance
 
 router = APIRouter(prefix="/api/saas", tags=["saas"], dependencies=[Depends(require_saas())])
@@ -108,6 +109,7 @@ def set_status(org_id: int, body: StatusIn, user: User = Depends(require_saas(*A
     if not o or not sub or body.status not in ("trial", "active", "suspended"):
         raise HTTPException(422, "Bad request")
     o.status, sub.status = body.status, body.status
+    _m21.record_event(db, sub, {"active": "activate", "suspended": "suspend"}.get(body.status, "trial_start"), user.id)
     if body.status == "active":
         plan = db.get(Plan, sub.plan_key)
         has_setup = db.scalar(select(SaasInvoice.id).where(SaasInvoice.org_id == org_id, SaasInvoice.kind == "setup", SaasInvoice.status != "void"))
@@ -137,6 +139,7 @@ def change_plan(org_id: int, body: PlanChangeIn, user: User = Depends(require_sa
     sub.plan_key, sub.band, sub.cycle, sub.discount_pct = body.plan, body.band, body.cycle, body.discount_pct
     if body.flats:
         sub.flats = body.flats
+    _m21.record_event(db, sub, "plan_change", user.id)
     audit(db, user_id=user.id, org_id=org_id, action="saas.plan.change", entity="subscription", entity_id=sub.id, meta={"from": old, "to": [body.plan, body.band, body.cycle, body.discount_pct]})
     db.commit()
     return _org_row(db, db.get(Organization, org_id))
@@ -280,6 +283,7 @@ def void_invoice(invoice_id: int, user: User = Depends(require_saas(*MONEY)), db
     if not inv or inv.status != "issued":
         raise HTTPException(422, "Only open invoices can be voided")
     inv.status = "void"
+    _m21.void_with_credit_note(db, inv, user.id)  # the row stays; a credit note is issued
     audit(db, user_id=user.id, org_id=inv.org_id, action="saas.invoice.void", entity="invoice", entity_id=inv.id)
     db.commit()
     return _inv(db, inv)
@@ -344,6 +348,7 @@ def patch_lead(lead_id: int, body: LeadPatch, user: User = Depends(require_saas(
         if body.status not in LEAD_STATUSES:
             raise HTTPException(422, "Bad status")
         l.status = body.status
+        _m21.record_lead_stage(db, l.id, body.status)
     if body.owner_id is not None:
         l.owner_id = body.owner_id or None
     audit(db, user_id=user.id, action="saas.lead.update", entity="lead", entity_id=lead_id, meta=body.model_dump(exclude_none=True))

@@ -657,7 +657,9 @@ def ledger_credits(db: Session, p: Payment) -> list[tuple[str, int, int]] | None
     if not inv or not inv.period.startswith(PREFIX):
         return None
     b = db.scalar(select(Booking).where(Booking.invoice_id == inv.id))
-    dep = (p.amount * b.deposit // b.total) if b and b.total and b.deposit else 0
+    dep = 0
+    if b and b.total and b.deposit:   # cumulative, so the parts add up to the exact deposit when the invoice is fully paid
+        dep = b.deposit * min(inv.paid, b.total) // b.total - b.deposit * max(0, min(inv.paid - p.amount, b.total)) // b.total
     return [("4020", 0, p.amount - dep), ("2010", 0, dep)]
 
 

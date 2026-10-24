@@ -62,7 +62,7 @@ def seed_visitors(db, ctx):
     # 3 currently inside (one has stayed too long, with a vehicle)
     add("A-501", "Rafi (cousin)", "guest", ago(1.5), "in", people=2, phone="01712000111")
     add("B-302", "Electrician Alamgir", "service", ago(0.8), "in", phone="01712000222")
-    add("A-203", "Rented van, movers", "service", ago(14), "in", people=3, vehicle="DHAKA-METRO-U-11-2345", via="override", note="Resident away, owner called the guard")
+    add("A-202", "Rented van, movers", "service", ago(14), "in", people=3, vehicle="DHAKA-METRO-U-11-2345", via="override", note="Resident away, owner called the guard")
     # 2 waiting for the resident
     add("A-501", "Sharmin Sultana", "guest", ago(0.05), "waiting", people=2, phone="01713000333")
     add("B-302", "Foodpanda rider", "courier", ago(0.02), "waiting")

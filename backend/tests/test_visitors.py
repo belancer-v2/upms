@@ -45,7 +45,7 @@ def test_guard_flow_arrival_approve_in_out(client):
     assert client.post(f"{V}/visits/{vid}/in", headers=hg).status_code == 409                                                  # not approved yet
     pend = client.get(f"{V}/mine/pending", headers=ht).json()
     assert any(x["id"] == vid for x in pend["waiting"]) and pend["unread"] >= 1
-    assert any(x["id"] == vid and not x["read"] for x in client.get(f"{V}/mine/notifications", headers=hw).json()["items"])
+    assert any(x["visit"]["id"] == vid and not x["read"] for x in client.get(f"{V}/mine/notifications", headers=hw).json()["items"])
     assert client.post(f"{V}/visits/{vid}/decision", json={"approve": True}, headers=ht).json()["status"] == "approved"
     assert client.post(f"{V}/visits/{vid}/decision", json={"approve": False}, headers=hw).status_code == 409                  # already answered
     assert any(x["id"] == vid for x in client.get(f"{V}/board", headers=hg).json()["approved"])
@@ -202,9 +202,9 @@ def test_photo_rules(client):
     assert client.get(url, headers=ht).status_code == 403
     assert client.get(url, headers=prop_headers(client, "president")).status_code == 403
     assert client.get(url).status_code in (401, 400)
-    assert client.get(f"{V}/visits/{v['id']}/photo", headers=prop_headers(client, "guard", "Lakeview Heights")).status_code == 404   # another building
+    assert client.get(f"{V}/visits/{v['id']}/photo", headers=prop_headers(client, "agency", "Lakeview Heights")).status_code == 404   # another building
     row = next(x for x in client.get(f"{V}/visits", params={"q": "Photo Visitor"}, headers=prop_headers(client, "president")).json()["items"])
-    assert row["photo"] is False and row["phone"] == "" or row["phone"] == ""
+    assert row["photo"] is False and row["phone"] == ""
     client.post(f"{V}/visits/{v['id']}/cancel", headers=hg)
 
 
@@ -234,7 +234,6 @@ def test_reports_search_paging_and_settings(client):
     # the guard sees today's log and what is still active, never older finished visits, and no phone numbers
     g = client.get(f"{V}/visits", params={"size": 100, "date_from": "2020-01-01"}, headers=hg).json()
     assert 0 < g["total"] < week["total"] and all(x["phone"] == "" for x in g["items"])
-    assert all(x["status"] in ("waiting", "approved", "in") or (x["created_at"] >= datetime.now(timezone.utc).strftime("%Y-%m-%d")[:0]) for x in g["items"])
     board = client.get(f"{V}/board", headers=hg).json()
     assert board["counts"]["inside"] == len(board["inside"]) and len(board["waiting"]) >= 2
 

@@ -136,21 +136,33 @@ def split_vat(total: int, pct: float) -> tuple[int, int]:
     return net, total - net
 
 
+def vat_facts(inv: SaasInvoice, default_pct: float) -> tuple[int, int, float, bool]:
+    """(net, vat, pct, vat_came_from_invoice). Credit-pack invoices (M19) already carry their own VAT; use it as is."""
+    vb, va = int(getattr(inv, "vat_bps", 0) or 0), int(getattr(inv, "vat_amount", 0) or 0)
+    if vb or va:
+        return inv.amount - va, va, (vb / 100 if vb else default_pct), True
+    net, vat = split_vat(inv.amount, default_pct)
+    return net, vat, default_pct, False
+
+
 def _customer_lang(db: Session, org_id: int) -> str:
     u = db.scalar(select(User).join(Membership, Membership.user_id == User.id).where(Membership.org_id == org_id).order_by(Membership.id))
     return u.lang if u and u.lang in ("en", "bn") else "en"
 
 
-def build_items(db: Session, inv: SaasInvoice, net_total: int, pct: float) -> list[dict]:
+def build_items(db: Session, inv: SaasInvoice, net_total: int, pct: float, items_are_net: bool = False) -> list[dict]:
     custom = getattr(inv, "items", None)
     if isinstance(custom, list) and custom and all(isinstance(x, dict) for x in custom):
         items, left = [], net_total
         for n, x in enumerate(custom):
-            gross = int(x.get("amount", x.get("total", 0)) or 0)
-            net = left if n == len(custom) - 1 else split_vat(gross, pct)[0]
+            amt = int(x.get("amount", x.get("total", 0)) or 0)
+            net = left if n == len(custom) - 1 else (amt if items_are_net else split_vat(amt, pct)[0])
             left -= net
-            d = str(x.get("description") or x.get("desc") or inv.description)
-            items.append({"desc": d, "desc_bn": str(x.get("description_bn") or d), "qty": int(x.get("qty", 1) or 1), "net": net})
+            name, bn = x.get("name") or x.get("description") or x.get("desc") or inv.description, x.get("name_bn") or x.get("description_bn") or ""
+            cr = x.get("credits")
+            unit = (x.get("kind") or "").upper()
+            d = str(name) + (f" ({cr} {unit} credits)" if cr else "")
+            items.append({"desc": d, "desc_bn": (str(bn) + (f" ({cr} {unit} ক্রেডিট)" if cr else "")) if bn else d, "qty": int(x.get("qty", 1) or 1), "net": net})
         return items
     sub = db.scalar(select(Subscription).where(Subscription.org_id == inv.org_id).order_by(Subscription.id.desc()))
     plan = db.get(Plan, sub.plan_key) if sub else None
@@ -168,18 +180,18 @@ def build_items(db: Session, inv: SaasInvoice, net_total: int, pct: float) -> li
     return [{"desc": en, "desc_bn": bn, "qty": 1, "net": net_total}]
 
 
-def issue_doc(db: Session, inv: SaasInvoice, user_id: int | None = None, lang: str | None = None) -> SaasInvoiceDoc:
+def issue_doc(db: Session, inv: SaasInvoice, user_id: int | None = None, lang: str | None = None, at: datetime | None = None) -> SaasInvoiceDoc:
     """Gives the invoice its tax-invoice number. Safe to call twice: the same document comes back."""
     doc = db.scalar(select(SaasInvoiceDoc).where(SaasInvoiceDoc.invoice_id == inv.id))
     if doc:
         return doc
     st = get_settings(db)
-    at = now()
+    at = at or now()
     fy = fiscal_year(at, st.fy_start_month)
     seq = next_number(db, "INV", fy)
-    net, vat = split_vat(inv.amount, st.default_vat_pct)
-    doc = SaasInvoiceDoc(invoice_id=inv.id, doc_no=fmt_number(st.invoice_prefix, fy, seq, 6), fy=fy, seq=seq, issued_at=at, vat_pct=st.default_vat_pct,
-                         net=net, vat=vat, total=inv.amount, items=build_items(db, inv, net, st.default_vat_pct),
+    net, vat, pct, own = vat_facts(inv, st.default_vat_pct)
+    doc = SaasInvoiceDoc(invoice_id=inv.id, doc_no=fmt_number(st.invoice_prefix, fy, seq, 6), fy=fy, seq=seq, issued_at=at, vat_pct=pct,
+                         net=net, vat=vat, total=inv.amount, items=build_items(db, inv, net, pct, own),
                          lang=lang or _customer_lang(db, inv.org_id), quote_ref=inv.number, issued_by=user_id)
     db.add(doc)
     db.flush()
@@ -191,17 +203,17 @@ def credit_total(db: Session, invoice_id: int) -> int:
     return int(db.scalar(select(func.coalesce(func.sum(SaasCreditNote.amount), 0)).where(SaasCreditNote.invoice_id == invoice_id)) or 0)
 
 
-def issue_credit_note(db: Session, inv: SaasInvoice, kind: str, reason: str, user_id: int | None, amount: int | None = None) -> SaasCreditNote:
-    doc = issue_doc(db, inv, user_id)
+def issue_credit_note(db: Session, inv: SaasInvoice, kind: str, reason: str, user_id: int | None, amount: int | None = None, at: datetime | None = None) -> SaasCreditNote:
+    doc = issue_doc(db, inv, user_id, at=at)
     room = inv.amount - credit_total(db, inv.id)
     amt = room if amount is None else amount
     if amt <= 0 or amt > room:
         raise ValueError("Credit note amount is more than what is left on the invoice")
     st = get_settings(db)
-    at = now()
+    at = at or now()
     fy = fiscal_year(at, st.fy_start_month)
     seq = next_number(db, "CN", fy)
-    vat = split_vat(amt, doc.vat_pct)[1]
+    vat = doc.vat if amt == doc.total else split_vat(amt, doc.vat_pct)[1]
     cn = SaasCreditNote(doc_no=fmt_number(st.credit_prefix, fy, seq, 4), fy=fy, seq=seq, invoice_id=inv.id, org_id=inv.org_id, kind=kind, amount=amt, vat=vat,
                         reason=reason[:200], issued_at=at, issued_by=user_id)
     db.add(cn)

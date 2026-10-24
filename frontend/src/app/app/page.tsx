@@ -2,6 +2,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Card, Chip, PageHead } from "@/components/ui";
+import { DutyStrip } from "@/components/DutyStrip";
 import { api, ftime } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useT } from "@/lib/i18n";
@@ -30,6 +31,7 @@ export default function Dashboard() {
           <h3>{t("dash.workspace")}</h3>
           <div className="row wrap" style={{ gap: 8, marginTop: 12 }}>{modules.map((m) => <Chip key={m} tone="info">{t(`mod.${m}`)}</Chip>)}</div>
         </Card>
+        {roles.some((r) => ["FLAT_OWNER", "TENANT", "OWNER_REP"].includes(r)) && <DutyStrip />}
         <Card style={{ gridColumn: "1 / -1" }}>
           <h3>{t("dash.recent")}</h3>
           {log === null ? <p className="muted">{t("common.loading")}</p> : log.length === 0 ? <p className="muted">{t("dash.nothing")}</p> : (

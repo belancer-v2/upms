@@ -8,7 +8,7 @@ import { useT } from "@/lib/i18n";
 export type PlanData = { key: string; name: string; name_bn: string; monthly: Record<string, number>; setup: Record<string, number>; sms_included: Record<string, number>; features: string[] };
 export type PlansResp = { bands: { key: string; label: string; max: number | null }[]; trial_days: number; yearly_months_paid: number; sms_pack: { count: number; price: number }; plans: PlanData[] };
 export const FEATURE_ORDER = ["billing", "expenses", "notices", "resident_web", "reports", "staff", "assets", "tenant_dmp", "reminders", "caretaker_app", "cash_confirm", "policies", "resident_portal", "visitor", "amenities", "parking", "maintenance", "cash_otp", "priority_support"];
-export const SOON = new Set(["resident_portal", "visitor", "amenities", "parking", "maintenance"]);
+export const SOON = new Set(["resident_portal", "maintenance"]);
 
 export function usePlans() {
   const [d, setD] = useState<PlansResp | null>(null);

@@ -42,6 +42,9 @@ from .routers import parking as parking_router  # noqa: E402
 app.include_router(parking_router.router)
 from .routers import amenities as amenities_router  # noqa: E402
 app.include_router(amenities_router.router)
+from .routers import campaigns as campaigns_router  # noqa: E402
+app.include_router(campaigns_router.router)
+app.include_router(campaigns_router.public_router)
 
 
 @app.get("/api/health")
@@ -49,3 +52,6 @@ def health():
     return {"ok": True, "app": "flatwise"}
 from .routers import agency as agency_router  # noqa: E402
 app.include_router(agency_router.router)
+from .routers import saas_reports as saas_reports_router  # noqa: E402
+app.include_router(saas_reports_router.router)
+app.include_router(saas_reports_router.doc_router)

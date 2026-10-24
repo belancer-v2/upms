@@ -3,12 +3,13 @@ import { useCallback, useEffect, useState } from "react";
 import { Btn, Card, Chip, DataTable, Field, Modal, PageHead, Stat, Tabs, useToast } from "@/components/ui";
 import { Avatar } from "@/components/Avatar";
 import { ProfileModal } from "@/components/ProfilePanel";
+import { DutyStrip } from "@/components/DutyStrip";
 import { api, fdate, ftime, money } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useT } from "@/lib/i18n";
 
 const ROLES = ["caretaker", "guard", "cleaner", "driver", "other"];
-type S = { id: number; name: string; name_bn: string; role: string; phone: string; joined: string; salary: number; status: string; nid: string; has_nid: boolean };
+type S = { id: number; name: string; name_bn: string; role: string; phone: string; joined: string; salary: number; status: string; nid: string; has_nid: boolean; agency?: { agency_id: number; name: string; name_bn: string; emp_no: string; substitute: boolean } | null };
 type Sh = { id: number; period: string; status: string; total: number; people: number; created_by: string; created_by_id: number; approved_by: string; paid_on: string | null; method: string; lines?: Ln[] };
 type Ln = { id: number; staff_id: number; name: string; name_bn: string; role: string; base: number; bonus: number; deduction: number; net: number; bonus_kind: string; note: string };
 const tone = (s: string) => (s === "paid" ? "ok" : s === "approved" ? "info" : "warn") as "ok" | "info" | "warn";
@@ -18,17 +19,21 @@ export default function Staff() {
   const edit = has("PROPERTY_ADMIN", "AGENCY_MANAGER", "SECRETARY"); const prepare = has("PROPERTY_ADMIN", "AGENCY_MANAGER", "TREASURER"); const approve = has("PROPERTY_ADMIN", "AGENCY_MANAGER", "PRESIDENT"); const reveal = approve;
   const [tab, setTab] = useState<"people" | "payroll">("people"); const [rows, setRows] = useState<S[]>([]); const [sheets, setSheets] = useState<Sh[]>([]); const [open, setOpen] = useState<Sh | null>(null);
   const [form, setForm] = useState<Partial<S> | null>(null); const [nid, setNid] = useState<S | null>(null); const [prof, setProf] = useState<S | null>(null); const [newSheet, setNewSheet] = useState(false);
-  const load = useCallback(async () => { setRows(await api("/staff")); setSheets(await api("/staff/payroll/sheets")); }, []);
+  const load = useCallback(async () => { setRows(await api("/staff?employer=all")); setSheets(await api("/staff/payroll/sheets")); }, []);
   useEffect(() => { load(); }, [load, prop?.id]);
   const openSheet = async (id: number) => setOpen(await api(`/staff/payroll/sheets/${id}`));
-  const active = rows.filter((r) => r.status === "active");
+  const active = rows.filter((r) => r.status === "active"); const [emp, setEmp] = useState("all");
+  const agencies = Array.from(new Map(rows.filter((r) => r.agency).map((r) => [r.agency!.agency_id, r.agency!])).values());
+  const shown = rows.filter((r) => emp === "all" || (emp === "direct" ? !r.agency : r.agency?.agency_id === +emp));
   return (<>
     <PageHead title={t("staff.title")} sub={t("staff.sub")} actions={tab === "people" ? (edit && <Btn onClick={() => setForm({ role: "guard" })}>{t("staff.add")}</Btn>) : (prepare && <Btn onClick={() => setNewSheet(true)}>{t("pay.sheet_new")}</Btn>)} />
     <div style={{ marginBottom: 16 }}><Tabs value={tab} onChange={(v) => { setTab(v); setOpen(null); }} items={[{ id: "people", label: `${t("staff.tab.people")} · ${active.length}` }, { id: "payroll", label: t("staff.tab.payroll") }]} /></div>
 
     {tab === "people" && (<div className="stack"><div className="grid g3"><Stat label={t("staff.tab.people")} value={active.length} /><Stat label={t("staff.total_pay")} value={money(active.reduce((a, r) => a + r.salary, 0))} /></div>
-      <DataTable rows={rows} pageSize={10} search={(r) => `${r.name} ${r.phone}`} cols={[
-        { key: "n", head: t("common.name"), render: (r) => <span className="row" style={{ gap: 10 }}><Avatar kind="staff" id={r.id} name={pick(r.name, r.name_bn || r.name)} size={36} /><span><b>{pick(r.name, r.name_bn || r.name)}</b><br /><span className="small muted">{t(`staff.role.${r.role}`)}</span></span></span> }, { key: "p", head: t("staff.phone"), render: (r) => r.phone || "–" },
+      <DutyStrip compact />
+      <div className="row"><select className="input" style={{ width: "auto" }} value={emp} onChange={(e) => setEmp(e.target.value)} aria-label={t("ag.f.agency")}><option value="all">{t("ag.f.all")}</option><option value="direct">{t("ag.f.direct")}</option>{agencies.map((a) => <option key={a.agency_id} value={a.agency_id}>{pick(a.name, a.name_bn || a.name)}</option>)}</select></div>
+      <DataTable rows={shown} pageSize={10} search={(r) => `${r.name} ${r.phone}`} cols={[
+        { key: "n", head: t("common.name"), render: (r) => <span className="row" style={{ gap: 10 }}><Avatar kind="staff" id={r.id} name={pick(r.name, r.name_bn || r.name)} size={36} /><span><b>{pick(r.name, r.name_bn || r.name)}</b><br /><span className="small muted">{t(`staff.role.${r.role}`)}</span>{r.agency && <> <Chip tone="info">{t("ag.agency_chip")}: {pick(r.agency.name, r.agency.name_bn || r.agency.name)}</Chip>{r.agency.substitute && <> <Chip tone="warn">{t("ag.chip_sub")}</Chip></>}</>}</span></span> }, { key: "p", head: t("staff.phone"), render: (r) => r.phone || "–" },
         { key: "j", head: t("staff.joined"), render: (r) => <span className="nowrap">{fdate(r.joined)}</span> }, { key: "s", head: t("staff.salary"), num: true, render: (r) => money(r.salary) },
         { key: "i", head: t("staff.nid"), render: (r) => <span className="row" style={{ gap: 8 }}><code>{r.has_nid ? r.nid : t("staff.no_nid")}</code>{reveal && r.has_nid && <Btn size="sm" variant="ghost" onClick={() => setNid(r)}>{t("staff.reveal")}</Btn>}</span> },
         { key: "st", head: "", render: (r) => <Chip tone={r.status === "active" ? "ok" : "mute"}>{t(r.status === "active" ? "staff.active" : "staff.left")}</Chip> },

@@ -7,7 +7,7 @@ from datetime import date, datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
-from sqlalchemy import func, or_, select
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.orm import Session
 
 from .. import config
@@ -328,11 +328,13 @@ def board(ctx: Ctx = Depends(property_ctx), db: Session = Depends(get_db)):
     _gate(ctx)
     ctx.need(*GATE)
     hours = _settings(db, ctx.property.id).overstay_hours
-    rows = db.scalars(select(Visit).where(Visit.property_id == ctx.property.id, Visit.status.in_(ACTIVE)).order_by(Visit.created_at.desc(), Visit.id.desc()).limit(200)).all()
+    # a visitor the resident denied stays on the board for an hour, so the guard sees the answer
+    recent_no = and_(Visit.status == "denied", Visit.decided_at >= now() - timedelta(hours=1))
+    rows = db.scalars(select(Visit).where(Visit.property_id == ctx.property.id, or_(Visit.status.in_(ACTIVE), recent_no)).order_by(Visit.created_at.desc(), Visit.id.desc()).limit(200)).all()
     units = _units(db, ctx)
     out = [_row(v, units, ctx, hours) for v in rows]
     return {"waiting": [r for r in out if r["status"] == "waiting"], "approved": [r for r in out if r["status"] == "approved"], "inside": [r for r in out if r["status"] == "in"],
-            "counts": _counts(db, ctx)}
+            "denied": [r for r in out if r["status"] == "denied"], "counts": _counts(db, ctx)}
 
 
 @router.get("/visits")

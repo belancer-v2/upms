@@ -86,6 +86,9 @@ def signup(body: SignupIn, db: Session = Depends(get_db)):
     db.add(Membership(user_id=user.id, org_id=org.id, property_id=prop.id, role="PROPERTY_ADMIN"))
     db.add(Subscription(org_id=org.id, plan_key=plan.key, band=band, flats=body.flats, status="trial",
                         trial_ends=now() + timedelta(days=TRIAL_DAYS)))
+    from ..services.saas_docs import record_event  # M21 history
+    db.flush()
+    record_event(db, db.scalar(select(Subscription).where(Subscription.org_id == org.id)), "trial_start", user.id)
     audit(db, user_id=user.id, org_id=org.id, property_id=prop.id, action="signup", entity="organization",
           entity_id=org.id, meta={"plan": plan.key, "band": band})
     db.commit()

@@ -732,5 +732,11 @@ EXTRA_SEEDS.append(seed_agency)
 from .seed_credits import seed_credits  # noqa: E402
 EXTRA_SEEDS.append(seed_credits)
 
+from .seed_mail import seed_mail  # noqa: E402
+EXTRA_SEEDS.append(seed_mail)
+
+from .seed_saas_reports import seed_saas_reports  # noqa: E402
+EXTRA_SEEDS.append(seed_saas_reports)
+
 if __name__ == "__main__":
     run()

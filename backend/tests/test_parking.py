@@ -133,7 +133,8 @@ def test_slot_add_reassign_swap_unallocate(client):
     assert client.put("/api/parking/settings", headers=ha, json={"page_size": 12}).json() == {"page_size": 12}
     assert client.get("/api/parking/slots", headers=ha).json()["size"] == 12
     ho = client.get("/api/parking/handover?which=unmet", headers=ha).json()
-    assert {r["unit"] for r in ho["items"]} == {"A-802", "B-402"} and ho["items"][0]["missing"] == {"car": 1}
+    assert {r["unit"] for r in ho["items"]} == {"A-201", "A-802", "B-402"}   # A-201 gave a slot back above
+    assert all(r["missing"] == {"car": 1} for r in ho["items"])
     assert client.get("/api/parking/handover?which=free", headers=ha).json()["total"] >= 3
     # committee can look but not change
     hp = H(client, "president")

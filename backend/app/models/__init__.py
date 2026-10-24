@@ -18,3 +18,5 @@ from .rental import RentalAgreement, RentalComment, RentalFollowup, RentalIssue,
 from .credits import CreditPack, CreditPurchase, CreditSetting, EmailLedger, PlatformSetting  # noqa
 from .agency import Agency, AgencyBill, AgencyDoc, AgencySetting, Post, Replacement, RosterSlot, ShiftDef, StaffPosting  # noqa
 from .visitors import FrequentVisitor, Visit, VisitorNotice, VisitorPass, VisitorSetting  # noqa
+from .saas_reports import LeadStageEvent, SaasCreditNote, SaasInvoiceDoc, SaasNumberSeq, SaasSettings, SubscriptionEvent  # noqa
+from .mail import MailAudience, MailCampaign, MailConsent, MailOutbox, MailProspect, MailSetting, MailSuppression, MailTemplate  # noqa
