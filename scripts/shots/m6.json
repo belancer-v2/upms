@@ -1,0 +1,10 @@
+{ "module": "m6-finance-assets", "shots": [
+  { "name": "01-finance-overview-treasurer", "path": "/app/finance", "as": "treasurer", "full": true },
+  { "name": "02-expenses-president-approves", "path": "/app/finance", "as": "president", "click": ["[role=tab]:has-text('Expenses')"], "full": true },
+  { "name": "03-new-expense-secretary", "path": "/app/finance", "as": "secretary", "click": ["button:has-text('New expense')"] },
+  { "name": "04-budget", "path": "/app/finance", "as": "treasurer", "click": ["[role=tab]:has-text('Budget')"] },
+  { "name": "05-fixed-assets", "path": "/app/finance", "as": "padmin", "click": ["[role=tab]:has-text('Assets')"], "full": true },
+  { "name": "06-ledger-trial-balance", "path": "/app/finance", "as": "auditor", "click": ["[role=tab]:has-text('Ledger')"], "full": true },
+  { "name": "07-finance-bangla-night", "path": "/app/finance", "as": "president", "lang": "bn", "theme": "dark", "full": true },
+  { "name": "08-caretaker-request-mobile", "path": "/app/finance", "as": "caretaker", "w": 390, "h": 844, "full": true }
+] }

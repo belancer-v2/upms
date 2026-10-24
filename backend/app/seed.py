@@ -382,7 +382,73 @@ def seed_cash(db, ctx):
     db.flush()
 
 
-EXTRA_SEEDS: list = [seed_plans, seed_saas_demo, seed_units, seed_billing, seed_cash]  # later modules append their seed functions here
+def seed_finance(db, ctx):
+    from datetime import date
+    from random import Random
+    from .models.billing import Payment
+    from .models.finance import Asset, Budget, Expense, Vendor
+    from .services import ledger
+    rnd = Random(31)
+    P = 100
+    for key in ("sunrise", "lake", "green"):
+        prop = ctx[key]
+        ledger.post(db, prop.id, date(2026, 4, 30), "Opening bank balance", [("1020", 400000 * P, 0), ("3010", 0, 400000 * P)], "opening", prop.id)
+        for p in db.scalars(select(Payment).where(Payment.property_id == prop.id, Payment.status == "verified").order_by(Payment.id)):
+            ledger.post(db, prop.id, p.paid_on, f"Service charge receipt {p.receipt_no}", [(ledger.METHOD_ACCOUNT[p.method], p.amount, 0), ("4010", 0, p.amount)], "payment", p.id)
+    sun = ctx["sunrise"]
+    tr = db.scalar(select(User).where(User.email == "treasurer@flatwise.demo"))
+    pres = db.scalar(select(User).where(User.email == "president@flatwise.demo"))
+    sec = db.scalar(select(User).where(User.email == "secretary@flatwise.demo"))
+    pa = db.scalar(select(User).where(User.email == "padmin@flatwise.demo"))
+    vend = {}
+    for key, en, bn, cat in (("desco", "DESCO (electricity)", "ডেসকো (বিদ্যুৎ)", "utilities"), ("wasa", "Dhaka WASA", "ঢাকা ওয়াসা", "utilities"), ("fuel", "Jamuna Fuel Station", "যমুনা ফিউয়েল স্টেশন", "fuel"),
+                              ("lift", "Metro Lift Service", "মেট্রো লিফট সার্ভিস", "repairs"), ("guard", "SafeGuard Security", "সেফগার্ড সিকিউরিটি", "services"), ("elec", "Rahman Electric Works", "রহমান ইলেকট্রিক", "repairs")):
+        v = Vendor(property_id=sun.id, name=en, name_bn=bn, category=cat, phone=f"01{rnd.randint(300000000, 999999999)}")
+        db.add(v); db.flush(); vend[key] = v
+    months = [(2026, m) for m in range(5, 11)]
+    methods = ["bank", "bkash", "cash", "bank"]
+
+    def expense(cat, title, amount, on, vendor, status="paid", approvers=(), requester=None, method="bank"):
+        e = Expense(property_id=sun.id, category=cat, vendor_id=vendor.id if vendor else None, title=title, amount=amount * P, spent_on=on, status=status, needs_two=amount * P > 5_000_000,
+                    requested_by=(requester or tr).id, approvals=[{"user_id": u.id, "name": u.name, "at": on.isoformat()} for u in approvers])
+        if status == "paid":
+            e.method, e.paid_on = method, on
+        db.add(e); db.flush()
+        if status == "paid":
+            ledger.post(db, sun.id, on, title, [(ledger.CATEGORY_ACCOUNT[cat], e.amount, 0), (ledger.METHOD_ACCOUNT[method], 0, e.amount)], "expense", e.id)
+        return e
+    for y, m in months:
+        mn = date(y, m, 1).strftime("%B")
+        expense("utilities", f"Electricity, common areas ({mn})", rnd.randint(16000, 21000), date(y, m, 14), vend["desco"], approvers=[pres], method="bank")
+        expense("utilities", f"Water bill ({mn})", rnd.randint(5500, 7500), date(y, m, 16), vend["wasa"], approvers=[pres], method="bank")
+        expense("fuel", f"Generator diesel ({mn})", rnd.randint(9000, 15000), date(y, m, rnd.randint(5, 25)), vend["fuel"], approvers=[pres], method=rnd.choice(["cash", "bkash"]))
+        expense("salary", f"Caretaker, guard and cleaner salary ({mn})", 38000, date(y, m, 28 if m < 10 else 24), None, approvers=[pres], method="bank")
+        expense("services", f"Security service ({mn})", 14000, date(y, m, 5), vend["guard"], approvers=[pres], method="bank")
+        if m in (6, 8, 9):
+            expense("repairs", rnd.choice(["Corridor light replacement", "Pump motor repair", "Gate repair", "Intercom fix"]), rnd.randint(3500, 18000), date(y, m, rnd.randint(8, 22)), vend["elec"], approvers=[pa], method=rnd.choice(methods))
+    # waiting for decisions, to show the approval flow
+    expense("repairs", "Lift motor overhaul (Block A)", 120000, date(2026, 10, 20), vend["lift"], status="pending", approvers=[pres], requester=tr)
+    expense("repairs", "Roof waterproofing, tower top", 85000, date(2026, 10, 18), vend["elec"], status="pending", requester=sec)
+    expense("utilities", "Electricity, common areas (October)", 19400, date(2026, 10, 14), vend["desco"], status="approved", approvers=[pres])
+    expense("services", "Pest control, all floors", 6500, date(2026, 10, 22), None, status="pending", requester=tr)
+    # yearly budget
+    for cat, amt in {"utilities": 330000, "repairs": 220000, "salary": 480000, "fuel": 170000, "services": 190000, "other": 50000}.items():
+        db.add(Budget(property_id=sun.id, year=2026, category=cat, amount=amt * P))
+    # fixed assets
+    for name, bn, cat, cost, on, life in (("Diesel generator 125 kVA", "ডিজেল জেনারেটর ১২৫ কেভিএ", "equipment", 850000, date(2022, 3, 12), 10), ("Passenger lifts (2)", "যাত্রী লিফট (২টি)", "building", 2400000, date(2020, 8, 1), 20),
+                                          ("CCTV system, 16 cameras", "সিসিটিভি সিস্টেম, ১৬ ক্যামেরা", "equipment", 180000, date(2024, 2, 20), 6), ("Water pump set", "পানির পাম্প সেট", "equipment", 65000, date(2023, 5, 9), 8),
+                                          ("Office furniture", "অফিস আসবাব", "furniture", 38000, date(2025, 1, 15), 8)):
+        a = Asset(property_id=sun.id, name=name, name_bn=bn, category=cat, cost=cost * P, bought_on=on, life_years=life, capitalised=True)
+        db.add(a); db.flush()
+        # bought before the books start: carried in with the opening balance, not paid from today's bank
+        ledger.post(db, sun.id, on, f"Bought {name}", [("1500", a.cost, 0), ("3010", 0, a.cost)], "asset", a.id)
+    ch = Asset(property_id=sun.id, name="Office chair", name_bn="অফিস চেয়ার", category="furniture", cost=8000 * P, bought_on=date(2026, 7, 3), life_years=5, capitalised=False, note="Below the BDT 20,000 asset line, booked as an expense")
+    db.add(ch); db.flush()
+    ledger.post(db, sun.id, ch.bought_on, "Bought Office chair (below asset threshold)", [("5020", ch.cost, 0), ("1010", 0, ch.cost)], "asset", ch.id)
+    db.flush()
+
+
+EXTRA_SEEDS: list = [seed_plans, seed_saas_demo, seed_units, seed_billing, seed_cash, seed_finance]
 
 if __name__ == "__main__":
     run()

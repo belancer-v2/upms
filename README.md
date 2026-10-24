@@ -24,7 +24,7 @@ Demo logins (password `demo1234`) are listed on the sign-in page when `DEMO=1`.
 | M3 Property setup: flats map, owners, tenants, to-let approval, agency portfolio | done |
 | M4 Service charge | done |
 | M5 Cash collection | done |
-| M6 Finance and assets | planned |
+| M6 Finance and assets | done |
 | M7 Staff and payroll | planned |
 | M8 Notices and policies | planned |
 | M9 Tenant onboarding and DMP | planned |
