@@ -33,6 +33,8 @@ app.include_router(complaints_router.router)
 app.include_router(committee_router.router)
 app.include_router(gateway_router.router)
 app.include_router(profiles.router)
+from .routers import amenities as amenities_router  # noqa: E402
+app.include_router(amenities_router.router)
 
 
 @app.get("/api/health")

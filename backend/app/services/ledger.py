@@ -9,7 +9,7 @@ from ..models.finance import Account, Journal, JournalLine
 CHART = [
     ("1010", "Cash in hand", "হাতে নগদ", "asset"), ("1020", "Bank account", "ব্যাংক হিসাব", "asset"), ("1030", "bKash / Nagad wallet", "বিকাশ / নগদ ওয়ালেট", "asset"), ("1500", "Fixed assets", "স্থায়ী সম্পদ", "asset"),
     ("3010", "Opening balance equity", "প্রারম্ভিক জের", "equity"),
-    ("4010", "Service charge income", "সার্ভিস চার্জ আয়", "income"), ("4090", "Other income", "অন্যান্য আয়", "income"),
+    ("2010", "Amenity deposits held", "জামানত (সুবিধা বুকিং)", "liability"), ("4010", "Service charge income", "সার্ভিস চার্জ আয়", "income"), ("4020", "Hall and amenity income", "হল ও সুবিধা আয়", "income"), ("4090", "Other income", "অন্যান্য আয়", "income"),
     ("5010", "Utilities", "ইউটিলিটি", "expense"), ("5020", "Repairs and maintenance", "মেরামত ও রক্ষণাবেক্ষণ", "expense"), ("5030", "Salaries", "বেতন", "expense"),
     ("5040", "Generator fuel", "জেনারেটর জ্বালানি", "expense"), ("5050", "Security and cleaning", "নিরাপত্তা ও পরিচ্ছন্নতা", "expense"), ("5090", "Other expenses", "অন্যান্য ব্যয়", "expense"),
 ]

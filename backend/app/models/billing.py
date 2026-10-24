@@ -25,7 +25,7 @@ class Invoice(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     property_id: Mapped[int] = mapped_column(ForeignKey("properties.id"), index=True)
     unit_id: Mapped[int] = mapped_column(ForeignKey("units.id"), index=True)
-    period: Mapped[str] = mapped_column(String(7), index=True)      # 2026-10
+    period: Mapped[str] = mapped_column(String(16), index=True)     # 2026-10, or HALL-12 for an amenity booking
     number: Mapped[str] = mapped_column(String(32))
     issue_date: Mapped[date] = mapped_column(Date)
     due_date: Mapped[date] = mapped_column(Date)

@@ -12,4 +12,6 @@ from .requests import CommitteeMember, Meeting, Proposal, ProposalVote, RequestC
 from .gateway import GatewayConfig, GatewaySession  # noqa
 from .budget import BudgetLock, BudgetMonth  # noqa
 from .profile import Profile  # noqa
+from .amenities import Amenity, Blackout, Booking, SlotHold  # noqa
 from .rental import RentalAgreement, RentalComment, RentalFollowup, RentalIssue, RentalNote, RentalPayment, RentalSetting  # noqa
+from .agency import Agency, AgencyBill, AgencyDoc, AgencySetting, Post, Replacement, RosterSlot, ShiftDef, StaffPosting  # noqa

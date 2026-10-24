@@ -305,7 +305,7 @@ def dues(ctx: Ctx = Depends(property_ctx), db: Session = Depends(get_db)):
 def summary(period: str = "", ctx: Ctx = Depends(property_ctx), db: Session = Depends(get_db)):
     _gate(ctx)
     ctx.need(*MONEY_VIEW)
-    periods = sorted(set(db.scalars(select(Invoice.period).where(Invoice.property_id == ctx.property.id))), reverse=True)
+    periods = sorted(set(db.scalars(select(Invoice.period).where(Invoice.property_id == ctx.property.id, Invoice.period.notlike("HALL-%")))), reverse=True)
     period = period or (periods[0] if periods else "")
 
     def agg(p: str):

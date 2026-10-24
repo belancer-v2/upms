@@ -26,7 +26,9 @@ PAY = MANAGE | {"TREASURER"}
 
 
 def _post_payment(db: Session, ctx: Ctx, p: Payment) -> None:
-    ledger.post(db, p.property_id, p.paid_on, f"Service charge receipt {p.receipt_no}", [(ledger.METHOD_ACCOUNT[p.method], p.amount, 0), ("4010", 0, p.amount)], "payment", p.id, ctx.user.id)
+    from .amenities import ledger_credits  # hall and amenity payments go to 4020 (and the deposit to 2010)
+    credits = ledger_credits(db, p) or [("4010", 0, p.amount)]
+    ledger.post(db, p.property_id, p.paid_on, f"Service charge receipt {p.receipt_no}", [(ledger.METHOD_ACCOUNT[p.method], p.amount, 0), *credits], "payment", p.id, ctx.user.id)
 
 
 B.POST_VERIFY.append(_post_payment)   # every confirmed payment lands in the ledger

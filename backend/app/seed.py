@@ -87,7 +87,7 @@ def seed_plans(db, ctx):
         Plan(key="standard", name="Standard", name_bn="স্ট্যান্ডার্ড", sort=2,
              monthly={"S": 3000 * P, "M": 4500 * P, "L": 7000 * P}, setup={"S": 3000 * P, "M": 5000 * P, "L": 8000 * P},
              sms_included={"S": 200, "M": 500, "L": 1000},
-             features=["billing", "expenses", "notices", "resident_web", "reports", "staff", "assets", "tenant_dmp", "reminders", "caretaker_app", "cash_confirm", "policies", "committee", "rental_records"]),
+             features=["billing", "expenses", "notices", "resident_web", "reports", "staff", "assets", "tenant_dmp", "reminders", "caretaker_app", "cash_confirm", "policies", "committee", "rental_records", "amenities"]),
         Plan(key="pro", name="Pro", name_bn="প্রো", sort=3,
              monthly={"S": 5000 * P, "M": 7500 * P, "L": 11000 * P}, setup={"S": 3000 * P, "M": 5000 * P, "L": 8000 * P},
              sms_included={"S": 200, "M": 500, "L": 1000},
@@ -719,6 +719,8 @@ EXTRA_SEEDS: list = [seed_plans, seed_saas_demo, seed_units, seed_billing, _seed
 
 from .seed_requests import seed_requests  # noqa: E402
 EXTRA_SEEDS.append(seed_requests)
+from .seed_amenities import seed_amenities  # noqa: E402
+EXTRA_SEEDS.append(seed_amenities)
 
 if __name__ == "__main__":
     run()
