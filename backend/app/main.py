@@ -1,0 +1,23 @@
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI
+
+from .db import Base, engine
+from . import models  # noqa: F401  (registers tables)
+from .routers import auth, core
+
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    Base.metadata.create_all(engine)
+    yield
+
+
+app = FastAPI(title="FlatWise API", version="0.1.0", lifespan=lifespan)
+app.include_router(auth.router)
+app.include_router(core.router)
+
+
+@app.get("/api/health")
+def health():
+    return {"ok": True, "app": "flatwise"}

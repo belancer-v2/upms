@@ -1,0 +1,9 @@
+{ "module": "m0-foundation", "shots": [
+  { "name": "01-login-day-en", "path": "/login" },
+  { "name": "02-login-night-bn", "path": "/login", "lang": "bn", "theme": "dark" },
+  { "name": "03-dashboard-owner-two-roles", "path": "/app", "as": "owner" },
+  { "name": "04-dashboard-super-admin-night", "path": "/app", "as": "super", "theme": "dark" },
+  { "name": "05-roles-and-access", "path": "/app/roles", "as": "super", "full": true },
+  { "name": "06-roles-bangla", "path": "/app/roles", "as": "padmin", "lang": "bn", "full": true },
+  { "name": "07-activity-log", "path": "/app/audit", "as": "padmin" }
+] }

@@ -1,0 +1,11 @@
+node_modules/
+.next/
+.venv/
+__pycache__/
+*.pyc
+*.db
+*.sqlite3
+.env
+.pytest_cache/
+frontend/next-env.d.ts
+.DS_Store
