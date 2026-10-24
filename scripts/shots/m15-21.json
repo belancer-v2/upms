@@ -1,0 +1,22 @@
+{ "module": "m15-21-extras", "shots": [
+  { "name": "m15-01-guard-gate-mobile", "path": "/app/visitors", "as": "guard", "w": 430, "h": 900, "full": true },
+  { "name": "m15-02-resident-approves-visitor", "path": "/app/visitors", "as": "owner", "full": true },
+  { "name": "m15-03-admin-visitor-log", "path": "/app/visitors", "as": "padmin", "full": true },
+  { "name": "m16-01-community-hall-calendar", "path": "/app/amenities", "as": "owner", "full": true },
+  { "name": "m16-02-hall-approval-queue", "path": "/app/amenities", "as": "president", "full": true },
+  { "name": "m16-03-hall-bangla-night", "path": "/app/amenities", "as": "owner", "lang": "bn", "theme": "dark", "full": true },
+  { "name": "m17-01-parking-slot-map", "path": "/app/parking", "as": "padmin", "full": true },
+  { "name": "m17-02-my-parking-vehicles", "path": "/app/parking", "as": "owner", "full": true },
+  { "name": "m17-03-generate-flats-with-parking", "path": "/app/units", "as": "padmin", "click": ["button:has-text('Add flats')", ".modal [role=tab]:has-text('Generate'), .modal button:has-text('Generate')"] },
+  { "name": "m18-01-duty-roster-week", "path": "/app/agency", "as": "padmin", "full": true },
+  { "name": "m18-02-agencies-and-registration", "path": "/app/agency", "as": "padmin", "click": ["[role=tab]:has-text('Agencies')"], "full": true },
+  { "name": "m18-03-staff-with-agency-chips", "path": "/app/staff", "as": "padmin", "full": true },
+  { "name": "m18-04-resident-duty-strip", "path": "/app", "as": "owner2", "full": true },
+  { "name": "m19-01-buy-credits-building", "path": "/app/credits", "as": "padmin", "full": true },
+  { "name": "m19-02-saas-credit-sales-console", "path": "/app/saas/credits", "as": "finance", "full": true },
+  { "name": "m20-01-email-campaigns", "path": "/app/saas/mail", "as": "sales", "full": true },
+  { "name": "m20-02-email-templates", "path": "/app/saas/mail", "as": "sales", "click": ["[role=tab]:has-text('Templates')"], "full": true },
+  { "name": "m21-01-saas-reports-revenue", "path": "/app/saas/reports", "as": "finance", "full": true },
+  { "name": "m21-02-saas-invoices", "path": "/app/saas/invoices", "as": "finance", "full": true },
+  { "name": "m21-03-saas-settings", "path": "/app/saas/settings", "as": "admin", "full": true }
+] }
