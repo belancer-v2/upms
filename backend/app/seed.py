@@ -540,7 +540,52 @@ def seed_notices(db, ctx):
     db.flush()
 
 
-EXTRA_SEEDS: list = [seed_plans, seed_saas_demo, seed_units, seed_billing, seed_cash, seed_finance, seed_payroll, seed_notices]
+def seed_onboarding(db, ctx):
+    import secrets
+    from datetime import date, datetime, timedelta, timezone
+    from . import config
+    from .models.onboarding import TenantCase, TenantDoc
+    from .models.property import Occupancy, Unit
+    from .services import vault
+    sun = ctx["sunrise"]
+    png = bytes.fromhex("89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c4890000000d49444154789c6360000002000001e221bc330000000049454e44ae426082")
+    units = {u.number: u for u in db.scalars(select(Unit).where(Unit.property_id == sun.id))}
+    to_let = [u for u in units.values() if u.status == "to_let"]
+    vacant = [u for u in units.values() if u.status == "vacant"]
+    rented = [o for o in db.scalars(select(Occupancy).where(Occupancy.kind == "tenant", Occupancy.active, Occupancy.unit_id.in_([u.id for u in units.values()]))) if o.user_id is None]
+    ago = lambda d: datetime.now(timezone.utc) - timedelta(days=d)
+    DET = {"father_name": "Abdul Mannan", "mother_name": "Rahela Khatun", "permanent_address": "Village Charmajlishpur, Upazila Sadar, Noakhali", "previous_address": "House 12, Road 3, Mirpur 10, Dhaka", "profession": "Software engineer", "employer": "Brightpath Technologies Ltd",
+           "family": [{"name": "Sharmin Akter", "relation": "Wife", "age": "29"}, {"name": "Rayan", "relation": "Son", "age": "4"}], "emergency_name": "Abdul Mannan", "emergency_phone": "01711223344", "reference_name": "Kamrul Hasan", "reference_phone": "01819887766"}
+
+    def mk(unit, name, phone, status, rent, start, details=True, docs=("nid_front", "nid_back", "photo"), doc_status="accepted", nid="1992456789012", ref="", on=None, receipt="", occ=None, ev=()):
+        c = TenantCase(property_id=sun.id, unit_id=unit.id, token=secrets.token_urlsafe(14), status=status, name=name, phone=phone, rent=rent * 100, advance=rent * 200, start_date=start, lease_months=12,
+                       details=DET if details else {}, nid_enc=vault.seal(nid) if nid else "", nid_last4=nid[-4:] if nid else "", police_ref=ref, police_on=on, receipt_no=receipt, occupancy_id=occ,
+                       created_by=1, submitted_at=ago(6) if status != "invited" else None, events=[{"at": ago(d).isoformat(), "by": by, "key": k, "note": n} for d, by, k, n in ev])
+        db.add(c); db.flush()
+        for k in docs:
+            stored = f"{secrets.token_hex(8)}.png"
+            folder = config.UPLOAD_DIR / str(c.id); folder.mkdir(parents=True, exist_ok=True); (folder / stored).write_bytes(png)
+            db.add(TenantDoc(case_id=c.id, kind=k, filename=f"{k}.png", stored=stored, content_type="image/png", size=len(png), status=doc_status))
+        return c
+    b302 = units["B-302"]
+    occ302 = db.scalar(select(Occupancy).where(Occupancy.unit_id == b302.id, Occupancy.kind == "tenant", Occupancy.active))
+    mk(b302, "Tasnim Ferdous", "01811000003", "done", 30000, date(2025, 7, 1), ref="DMP/TEN/2025/04412", on=date(2025, 7, 9), receipt="DMP-RCPT-88231", occ=occ302.id if occ302 else None,
+       ev=[(470, "Abdul Karim", "invited", ""), (466, "Tasnim Ferdous", "submitted", ""), (462, "Abdul Karim", "verified", ""), (460, "Abdul Karim", "police", "DMP/TEN/2025/04412"), (455, "Abdul Karim", "done", "DMP-RCPT-88231")])
+    if len(to_let) >= 1:
+        mk(to_let[0], "Mizanur Rahman", "01912345678", "review", 28000, date(2026, 11, 5), doc_status="pending", ev=[(8, "Mahmud Hasan", "invited", ""), (6, "Mizanur Rahman", "submitted", "")])
+    if len(to_let) >= 2:
+        mk(to_let[1], "Nusrat Jahan", "01712121212", "invited", 26000, date(2026, 11, 15), details=False, docs=(), nid="", ev=[(2, "Abdul Karim", "invited", "")])
+    if vacant:
+        u = vacant[0]; u.status = "occupied"
+        occ = Occupancy(unit_id=u.id, kind="tenant", name="Rubel Ahmed", name_bn="রুবেল আহমেদ", phone="01555000111", start_date=date(2026, 10, 12)); db.add(occ); db.flush()
+        mk(u, "Rubel Ahmed", "01555000111", "verified", 24000, date(2026, 10, 12), occ=occ.id, ev=[(14, "Abdul Karim", "invited", ""), (12, "Rubel Ahmed", "submitted", ""), (10, "Abdul Karim", "verified", "")])
+    for o in rented[:1]:
+        u = db.get(Unit, o.unit_id)
+        mk(u, o.name, o.phone or "01700000000", "police", 27000, o.start_date, ref="DMP/TEN/2026/10977", on=date(2026, 10, 20), occ=o.id, ev=[(30, "Abdul Karim", "invited", ""), (24, o.name, "submitted", ""), (20, "Abdul Karim", "verified", ""), (4, "Abdul Karim", "police", "DMP/TEN/2026/10977")])
+    db.flush()
+
+
+EXTRA_SEEDS: list = [seed_plans, seed_saas_demo, seed_units, seed_billing, seed_cash, seed_finance, seed_payroll, seed_notices, seed_onboarding]
 
 if __name__ == "__main__":
     run()

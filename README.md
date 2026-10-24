@@ -27,7 +27,7 @@ Demo logins (password `demo1234`) are listed on the sign-in page when `DEMO=1`.
 | M6 Finance and assets | done |
 | M7 Staff and payroll | done |
 | M8 Notices and policies | done |
-| M9 Tenant onboarding and DMP | planned |
+| M9 Tenant onboarding and DMP pack | done |
 | M10 Complaints and committee | planned |
 
 ## User types

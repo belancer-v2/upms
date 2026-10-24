@@ -1,0 +1,12 @@
+{ "module": "m9-tenant-onboarding", "shots": [
+  { "name": "01-onboarding-board-admin", "path": "/app/onboarding", "as": "padmin", "full": true },
+  { "name": "02-case-to-check-documents", "path": "/app/onboarding", "as": "padmin", "click": ["tr:has-text('Mizanur') button:has-text('View')"] },
+  { "name": "03-owner-adds-tenant", "path": "/app/onboarding", "as": "owner", "click": ["button:has-text('Add a tenant')"] },
+  { "name": "04-case-waiting-tenant-link", "path": "/app/onboarding", "as": "padmin", "click": ["tr:has-text('Nusrat') button:has-text('View')"] },
+  { "name": "05-tenant-form-step1-mobile", "path": "/t/bfSklWq0wI-2Z5UeUAQ", "w": 430, "h": 900, "full": true },
+  { "name": "06-tenant-form-documents-bangla", "path": "/t/bfSklWq0wI-2Z5UeUAQ", "lang": "bn", "w": 430, "h": 900, "click": ["button:has-text('পরের ধাপ')", "button:has-text('পরের ধাপ')", "button:has-text('পরের ধাপ')"], "full": true },
+  { "name": "07-case-verified-print-pack", "path": "/app/onboarding", "as": "secretary", "click": ["tr:has-text('Rubel') button:has-text('View')"] },
+  { "name": "08-dmp-pack-printable", "path": "/app/onboarding/4/pack", "as": "padmin", "full": true },
+  { "name": "09-onboarding-bangla-night", "path": "/app/onboarding", "as": "president", "lang": "bn", "theme": "dark", "full": true },
+  { "name": "10-onboarding-mobile", "path": "/app/onboarding", "as": "secretary", "w": 390, "h": 844, "full": true }
+] }

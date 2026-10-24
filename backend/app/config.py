@@ -10,3 +10,7 @@ TOKEN_HOURS = int(os.getenv("TOKEN_HOURS", "24"))
 DEMO = os.getenv("DEMO", "1") == "1"
 # Key used to encrypt NID numbers at rest (Fernet needs a urlsafe base64 32-byte key).
 NID_KEY = os.getenv("NID_KEY", "")
+
+# Uploaded tenant documents (NID photos, agreements). Use a private bucket in production.
+UPLOAD_DIR = Path(os.getenv("UPLOAD_DIR", str(BASE_DIR / "uploads")))
+MAX_UPLOAD_BYTES = 3 * 1024 * 1024
