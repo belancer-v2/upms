@@ -13,7 +13,7 @@ CHART = [
     ("5010", "Utilities", "ইউটিলিটি", "expense"), ("5020", "Repairs and maintenance", "মেরামত ও রক্ষণাবেক্ষণ", "expense"), ("5030", "Salaries", "বেতন", "expense"),
     ("5040", "Generator fuel", "জেনারেটর জ্বালানি", "expense"), ("5050", "Security and cleaning", "নিরাপত্তা ও পরিচ্ছন্নতা", "expense"), ("5090", "Other expenses", "অন্যান্য ব্যয়", "expense"),
 ]
-METHOD_ACCOUNT = {"cash": "1010", "bank": "1020", "bkash": "1030", "nagad": "1030"}
+METHOD_ACCOUNT = {"cash": "1010", "bank": "1020", "bkash": "1030", "nagad": "1030", "card": "1020"}
 CATEGORY_ACCOUNT = {"utilities": "5010", "repairs": "5020", "salary": "5030", "fuel": "5040", "services": "5050", "other": "5090"}
 CAPITALISE_FROM = 2_000_000   # paisa: items of BDT 20,000 or more are assets, cheaper ones are expenses
 

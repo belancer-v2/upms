@@ -6,7 +6,7 @@ from ..models.saas import FeatureOverride, Plan, Subscription
 
 ALL_FEATURES = ["billing", "expenses", "notices", "resident_web", "reports", "staff", "assets", "tenant_dmp", "reminders",
                 "caretaker_app", "cash_confirm", "policies", "resident_portal", "visitor", "amenities", "parking",
-                "maintenance", "cash_otp", "priority_support"]
+                "maintenance", "cash_otp", "priority_support", "gateway", "committee", "rental_records"]
 
 
 def current_subscription(db: Session, org_id: int) -> Subscription | None:

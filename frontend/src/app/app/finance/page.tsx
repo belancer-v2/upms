@@ -4,6 +4,7 @@ import { Bar, Btn, Card, Chip, DataTable, Empty, Field, Modal, PageHead, Stat, T
 import { api, fdate, money } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useT } from "@/lib/i18n";
+import MonthlyBudget from "@/components/MonthlyBudget";
 
 const CATS = ["utilities", "repairs", "salary", "fuel", "services", "other"];
 const METHODS = ["bank", "cash", "bkash", "nagad"];
@@ -13,7 +14,7 @@ type Vendor = { id: number; name: string; name_bn: string };
 type Asset = { id: number; name: string; name_bn: string; cost: number; bought_on: string; life_years: number; capitalised: boolean; status: string; depreciation: number; book_value: number; note: string };
 type Jr = { id: number; date: string; memo: string; source: string; lines: { code: string; name: string; name_bn: string; debit: number; credit: number }[] };
 type Trial = { rows: { code: string; name: string; name_bn: string; debit: number; credit: number }[]; debit: number; credit: number };
-type Tab = "overview" | "expenses" | "budget" | "assets" | "ledger";
+type Tab = "overview" | "expenses" | "budget" | "monthly" | "assets" | "ledger";
 const stTone = (s: string) => (s === "paid" ? "ok" : s === "rejected" ? "bad" : s === "approved" ? "info" : "warn") as "ok" | "bad" | "info" | "warn";
 
 export default function Finance() {
@@ -36,7 +37,7 @@ export default function Finance() {
   const act = async (path: string, body?: unknown, ok?: string) => { try { await api(path, { method: "POST", body }); if (ok) toast.show(ok); load(); } catch (e: any) { toast.show(e.message); } };
   const myTurn = (e: Exp) => e.status === "pending" && approver && e.requested_by_id !== user?.id && !e.approvals.some((a) => a.user_id === user?.id);
   const waiting = exps.filter((e) => myTurn(e)); const topay = exps.filter((e) => e.status === "approved");
-  const items = [{ id: "overview" as Tab, label: t("fin.tab.overview") }, { id: "expenses" as Tab, label: `${t("fin.tab.expenses")}${waiting.length ? ` · ${waiting.length}` : ""}` }, { id: "budget" as Tab, label: t("fin.tab.budget") }, ...(feature("assets") ? [{ id: "assets" as Tab, label: t("fin.tab.assets") }] : []), { id: "ledger" as Tab, label: t("fin.tab.ledger") }];
+  const items = [{ id: "overview" as Tab, label: t("fin.tab.overview") }, { id: "expenses" as Tab, label: `${t("fin.tab.expenses")}${waiting.length ? ` · ${waiting.length}` : ""}` }, { id: "budget" as Tab, label: t("fin.tab.budget") }, { id: "monthly" as Tab, label: t("bud.tab") }, ...(feature("assets") ? [{ id: "assets" as Tab, label: t("fin.tab.assets") }] : []), { id: "ledger" as Tab, label: t("fin.tab.ledger") }];
   const maxM = Math.max(1, ...(sum?.monthly ?? []).flatMap((m) => [m.income, m.expense]));
   const cname = (c: string) => t(`fin.cat.${c}`);
 
@@ -67,6 +68,8 @@ export default function Finance() {
       { key: "act", head: "", render: (r) => <div className="row">{myTurn(r) && <><Btn size="sm" onClick={() => act(`/finance/expenses/${r.id}/approve`, undefined, t("fin.saved"))}>{t("fin.approve")}</Btn><Btn size="sm" variant="outline" onClick={() => setRejFor(r)}>{t("fin.reject")}</Btn></>}{r.status === "approved" && payer && <Btn size="sm" onClick={() => setPayFor(r)}>{t("fin.pay")}</Btn>}</div> }]} />}
 
     {tab === "budget" && <BudgetTab bud={bud} edit={payer} onSave={async (lines) => { await api("/finance/budget", { method: "PUT", body: { year: sum?.year ?? new Date().getFullYear(), lines } }); toast.show(t("fin.saved")); load(); }} />}
+
+    {tab === "monthly" && viewer && <MonthlyBudget />}
 
     {tab === "assets" && assets && (<div className="stack">
       <div className="grid g3"><Stat label={t("fin.asset.total_cost")} value={money(assets.cost)} /><Stat label={t("fin.asset.total_book")} value={money(assets.book_value)} />{payer && <div style={{ display: "flex", alignItems: "center" }}><Btn onClick={() => setNewAsset(true)}>{t("fin.asset.add")}</Btn></div>}</div>

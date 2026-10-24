@@ -8,3 +8,8 @@ from .finance import Account, Asset, Budget, Expense, Journal, JournalLine, Vend
 from .staff import NidView, SalaryLine, SalarySheet, Staff  # noqa
 from .notice import Notice, Policy, PolicyAcceptance, PolicyVersion, Receipt  # noqa
 from .onboarding import TenantCase, TenantDoc  # noqa
+from .requests import CommitteeMember, Meeting, Proposal, ProposalVote, RequestComment, ServiceRequest, SlaRule  # noqa
+from .gateway import GatewayConfig, GatewaySession  # noqa
+from .budget import BudgetLock, BudgetMonth  # noqa
+from .profile import Profile  # noqa
+from .rental import RentalAgreement, RentalComment, RentalFollowup, RentalIssue, RentalNote, RentalPayment, RentalSetting  # noqa

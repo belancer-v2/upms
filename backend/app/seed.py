@@ -87,12 +87,12 @@ def seed_plans(db, ctx):
         Plan(key="standard", name="Standard", name_bn="স্ট্যান্ডার্ড", sort=2,
              monthly={"S": 3000 * P, "M": 4500 * P, "L": 7000 * P}, setup={"S": 3000 * P, "M": 5000 * P, "L": 8000 * P},
              sms_included={"S": 200, "M": 500, "L": 1000},
-             features=["billing", "expenses", "notices", "resident_web", "reports", "staff", "assets", "tenant_dmp", "reminders", "caretaker_app", "cash_confirm", "policies"]),
+             features=["billing", "expenses", "notices", "resident_web", "reports", "staff", "assets", "tenant_dmp", "reminders", "caretaker_app", "cash_confirm", "policies", "committee", "rental_records"]),
         Plan(key="pro", name="Pro", name_bn="প্রো", sort=3,
              monthly={"S": 5000 * P, "M": 7500 * P, "L": 11000 * P}, setup={"S": 3000 * P, "M": 5000 * P, "L": 8000 * P},
              sms_included={"S": 200, "M": 500, "L": 1000},
              features=["billing", "expenses", "notices", "resident_web", "reports", "staff", "assets", "tenant_dmp", "reminders", "caretaker_app", "cash_confirm", "policies",
-                       "resident_portal", "visitor", "amenities", "parking", "maintenance", "cash_otp", "priority_support"]),
+                       "resident_portal", "visitor", "amenities", "parking", "maintenance", "cash_otp", "priority_support", "gateway", "committee", "rental_records"]),
     ])
     db.flush()
     # the demo agency and its three buildings run on Pro
@@ -585,7 +585,140 @@ def seed_onboarding(db, ctx):
     db.flush()
 
 
-EXTRA_SEEDS: list = [seed_plans, seed_saas_demo, seed_units, seed_billing, seed_cash, seed_finance, seed_payroll, seed_notices, seed_onboarding]
+def seed_budget_months(db, ctx):
+    """2026 month-by-month budget for Sunrise. Seasonal: electricity and generator fuel peak in the hot months."""
+    from .models.budget import BudgetMonth
+    P = 100
+    # (Jan..Dec) in thousand taka
+    plan = {
+        "utilities": [22, 22, 24, 28, 32, 34, 34, 34, 32, 28, 23, 22],
+        "fuel": [8, 8, 10, 13, 16, 17, 17, 17, 15, 12, 9, 8],
+        "salary": [40] * 12, "services": [14] * 12,
+        "repairs": [14, 14, 16, 18, 20, 22, 20, 20, 20, 18, 16, 14],
+        "other": [4, 4, 4, 4, 4, 5, 4, 4, 4, 4, 5, 4],
+    }
+    for cat, vals in plan.items():
+        for m, v in enumerate(vals, 1):
+            db.add(BudgetMonth(property_id=ctx["sunrise"].id, year=2026, month=m, category=cat, amount=v * 1000 * P))
+    db.flush()
+
+
+def _placeholder_png(seed: int, size: int = 96) -> bytes:
+    """A small valid PNG: coloured square with a lighter head-and-shoulders silhouette. No imaging library needed."""
+    import colorsys, struct, zlib
+    r, g, b = [int(c * 255) for c in colorsys.hsv_to_rgb((seed * 0.137) % 1, 0.45, 0.78)]
+    lr, lg, lb = min(255, r + 70), min(255, g + 70), min(255, b + 70)
+    rows = bytearray()
+    for y in range(size):
+        rows.append(0)
+        for x in range(size):
+            head = (x - size / 2) ** 2 + (y - size * 0.38) ** 2 <= (size * 0.19) ** 2
+            body = y > size * 0.66 and (x - size / 2) ** 2 / (size * 0.36) ** 2 + (y - size * 0.98) ** 2 / (size * 0.34) ** 2 <= 1
+            rows += bytes((lr, lg, lb) if head or body else (r, g, b))
+    def chunk(tag, data):
+        c = struct.pack(">I", len(data)) + tag + data
+        return c + struct.pack(">I", zlib.crc32(tag + data) & 0xFFFFFFFF)
+    return b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", size, size, 8, 2, 0, 0, 0)) + chunk(b"IDAT", zlib.compress(bytes(rows))) + chunk(b"IEND", b"")
+
+
+def seed_profiles(db, ctx):
+    """Placeholder photos and a few optional details for about ten people (owners, committee, tenant, 4 staff)."""
+    from datetime import date as _d
+    from . import config
+    from .models.profile import Profile
+    from .models.property import Occupancy
+    from .models.staff import Staff
+    folder = config.UPLOAD_DIR / "avatars"
+    folder.mkdir(parents=True, exist_ok=True)
+    n = 0
+
+    def put(kind, rid, **d):
+        nonlocal n
+        n += 1
+        name = f"{kind}_{rid}_seed{n}.png"
+        (folder / name).write_bytes(_placeholder_png(n * 3 + rid))
+        db.add(Profile(kind=kind, ref_id=rid, photo_file=name, photo_type="image/png", photo_ver=1, languages=d.pop("languages", ["Bangla", "English"]), **d))
+    info = {
+        "president": dict(about="Retired physician. Chairs the committee.", dob=_d(1960, 3, 14), blood_group="B+", profession="Physician", emergency_name="Nasrin Uddin", emergency_phone="01711555001", address="A-801, Sunrise Tower, Dhanmondi"),
+        "secretary": dict(about="Keeps the minutes and the notices.", dob=_d(1975, 9, 2), blood_group="O+", profession="Bank officer", emergency_name="Hasan Akter", emergency_phone="01711555002"),
+        "treasurer": dict(about="Looks after collections and payroll.", dob=_d(1968, 1, 20), blood_group="A+", profession="Accountant"),
+        "owner": dict(about="Flat owner and committee member.", dob=_d(1982, 6, 8), blood_group="AB+", profession="Engineer", emergency_name="Mina Hasan", emergency_phone="01711555003", languages=["Bangla", "English", "Hindi"]),
+        "owner2": dict(blood_group="O-", profession="Teacher"),
+    }
+    for email, d in info.items():
+        u = db.scalar(select(User).where(User.email == f"{email}@flatwise.demo"))
+        if u:
+            put("user", u.id, **d)
+    t = db.scalar(select(User).where(User.email == "tenant@flatwise.demo"))
+    occ = db.scalar(select(Occupancy).where(Occupancy.user_id == t.id)) if t else None
+    if occ:
+        put("occupant", occ.id, about="Tenant of B-302.", profession="Software developer", blood_group="A-", emergency_name="Ferdous Alam", emergency_phone="01711555004")
+    for s in db.scalars(select(Staff).order_by(Staff.id).limit(4)):
+        put("staff", s.id, blood_group=["O+", "B+", "A+", "AB+"][s.id % 4], address="Dhaka", emergency_name="Family member", emergency_phone="01700555000", languages=["Bangla"])
+    db.flush()
+
+
+def _seed_gateway(db, ctx):
+    from .services.gateway import seed_gateway
+    seed_gateway(db, ctx)
+
+
+def seed_rental(db, ctx):
+    """M14: B-302 (owner Rokeya, tenant Tasnim) has Rental records ON; A-501 has it OFF (it has no tenant)."""
+    from datetime import date, datetime, timedelta, timezone
+    from . import config
+    from .models.property import Unit
+    from .models.rental import RentalAgreement, RentalComment, RentalFollowup, RentalIssue, RentalNote, RentalPayment, RentalSetting
+    sun = ctx["sunrise"]
+    units = {u.number: u for u in db.scalars(select(Unit).where(Unit.property_id == sun.id))}
+    owner = db.scalar(select(User).where(User.email == "owner2@flatwise.demo"))
+    tenant = db.scalar(select(User).where(User.email == "tenant@flatwise.demo"))
+    b302, a501 = units["B-302"], units["A-501"]
+    db.add(RentalSetting(unit_id=a501.id, property_id=sun.id, enabled=False))
+    st = RentalSetting(unit_id=b302.id, property_id=sun.id, enabled=True, receipt_seq=0, updated_by=owner.id)
+    db.add(st)
+    today = date.today()
+    shift = lambda k: date(today.year + (today.month - 1 + k) // 12, (today.month - 1 + k) % 12 + 1, 1)
+    ago = lambda d: datetime.now(timezone.utc) - timedelta(days=d)
+    pdf = b"%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj\n3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 200 200]>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF\n"
+    png = bytes.fromhex("89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c4890000000d49444154789c6360000002000001e221bc330000000049454e44ae426082")
+    folder = config.UPLOAD_DIR / "rental" / str(b302.id)
+    folder.mkdir(parents=True, exist_ok=True)
+    (folder / "seedagreement.pdf").write_bytes(pdf)
+    (folder / "seedtap.png").write_bytes(png)
+    db.add(RentalAgreement(unit_id=b302.id, title="Rental agreement, B-302", start_date=shift(-6), end_date=today + timedelta(days=40), rent=30000 * 100, advance=60000 * 100,
+                           filename="rental-agreement-b302.pdf", stored="seedagreement.pdf", content_type="application/pdf", size=len(pdf), created_by=owner.id))
+    seq = 0
+    for k in range(-6, 0):
+        if k == -3:
+            continue                      # the overdue month
+        d = shift(k)
+        bank = k % 2 == 0
+        pay = RentalPayment(unit_id=b302.id, period=d.strftime("%Y-%m"), amount=30000 * 100, method="bank" if bank else "cash", paid_on=d.replace(day=5 + (k % 3)),
+                            bank_ref=f"DBBL-TRX-{880000 + k * 7}" if bank else "", note="Paid in full", status="confirmed", source="owner", created_by=owner.id, decided_at=ago(-k * 30))
+        if k <= -4:                       # the oldest months already have a money receipt
+            seq += 1
+            pay.receipt_seq, pay.receipt_no = seq, f"MR-B-302-{seq:04d}"
+        db.add(pay)
+    st.receipt_seq = seq
+    db.add(RentalNote(unit_id=b302.id, kind="reminder", period=shift(-3).strftime("%Y-%m"), body="SMS rent reminder sent", sms_status="sent", created_by=owner.id, created_at=ago(60)))
+    i1 = RentalIssue(unit_id=b302.id, title="Kitchen tap is leaking", body="The mixer tap under the sink drips all night.", status="in_progress", cost=250000, cost_note="Plumber, new cartridge",
+                     raised_by=tenant.id, raised_side="tenant", created_at=ago(9), updated_at=ago(2))
+    i2 = RentalIssue(unit_id=b302.id, title="Bedroom light flickers", body="Tube light flickers when the fan is on.", status="open", photo_name="light.png", photo_stored="seedtap.png", photo_type="image/png",
+                     raised_by=tenant.id, raised_side="tenant", created_at=ago(3), updated_at=ago(3))
+    db.add_all([i1, i2])
+    db.flush()
+    db.add_all([RentalComment(issue_id=i1.id, user_id=owner.id, side="owner", body="I have asked a plumber to come on Saturday.", created_at=ago(7)),
+                RentalComment(issue_id=i1.id, user_id=tenant.id, side="tenant", body="Thank you. I will be home after 10 am.", created_at=ago(6))])
+    db.add_all([RentalFollowup(unit_id=b302.id, text=f"Ask about the {shift(-3).strftime('%Y-%m')} rent", due_date=today + timedelta(days=2), ref_kind="rent", ref=shift(-3).strftime("%Y-%m"), created_by=owner.id),
+                RentalFollowup(unit_id=b302.id, text="Check the tap after the plumber's visit", due_date=today + timedelta(days=5), ref_kind="issue", ref=str(i1.id), created_by=owner.id)])
+    db.flush()
+
+
+EXTRA_SEEDS: list = [seed_plans, seed_saas_demo, seed_units, seed_billing, _seed_gateway, seed_cash, seed_finance, seed_payroll, seed_notices, seed_onboarding, seed_budget_months, seed_profiles, seed_rental]
+
+from .seed_requests import seed_requests  # noqa: E402
+EXTRA_SEEDS.append(seed_requests)
 
 if __name__ == "__main__":
     run()
