@@ -5,6 +5,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { useAuth } from "@/lib/auth";
 import { useT } from "@/lib/i18n";
 import { ICONS, NAV } from "@/lib/nav";
+import { Avatar } from "./Avatar";
 import { Logo } from "./Logo";
 import { Toggles } from "./Toggles";
 
@@ -56,7 +57,7 @@ export function Shell({ children }: { children: ReactNode }) {
           <div className="grow" />
           <Toggles />
           <div className="row" style={{ gap: 10 }}>
-            <span className="avatar" aria-hidden>{user.name.slice(0, 1)}</span>
+            <Avatar kind="user" id={user.id} name={pick(user.name, user.name_bn)} size={38} />
             <div className="small" style={{ lineHeight: 1.2 }}><b>{pick(user.name, user.name_bn)}</b><br /><span className="muted">{user.saas_role ? t(`role.${user.saas_role}`) : ""}</span></div>
             <button className="btn btn-ghost btn-sm" onClick={logout}>{t("auth.signout")}</button>
           </div>

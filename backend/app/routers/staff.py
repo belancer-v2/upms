@@ -282,4 +282,4 @@ def payslip(lid: int, ctx: Ctx = Depends(property_ctx), db: Session = Depends(ge
         raise HTTPException(404, "Not found")
     s = db.get(Staff, l.staff_id)
     return {"building": ctx.property.name, "building_bn": ctx.property.name_bn, "address": ctx.property.address, "period": sh.period, "status": sh.status, "paid_on": sh.paid_on.isoformat() if sh.paid_on else None,
-            "name": s.name, "name_bn": s.name_bn, "role": s.role, "base": l.base, "bonus": l.bonus, "bonus_kind": l.bonus_kind, "deduction": l.deduction, "net": l.base + l.bonus - l.deduction, "note": l.note, "method": sh.method}
+            "staff_id": s.id, "name": s.name, "name_bn": s.name_bn, "role": s.role, "base": l.base, "bonus": l.bonus, "bonus_kind": l.bonus_kind, "deduction": l.deduction, "net": l.base + l.bonus - l.deduction, "note": l.note, "method": sh.method}

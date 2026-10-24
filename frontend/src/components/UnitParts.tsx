@@ -1,6 +1,8 @@
 "use client";
 import { useState } from "react";
 import { Btn, Chip, Field, Modal } from "@/components/ui";
+import { Avatar } from "@/components/Avatar";
+import { ProfileModal } from "@/components/ProfilePanel";
 import { api, fdate } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useT } from "@/lib/i18n";
@@ -31,11 +33,13 @@ export function UnitMap({ units, onPick, color }: { units: Unit[]; onPick: (u: U
 }
 
 export function PersonLine({ p, showContact }: { p: Person; showContact?: boolean }) {
-  const { t, pick } = useT();
+  const { t, pick } = useT(); const [prof, setProf] = useState(false);
   return (
     <div className="row between" style={{ padding: "8px 0", borderTop: "1px solid var(--line)", gap: 12 }}>
+      <div className="row" style={{ gap: 12, alignItems: "center" }}><button className="icon-btn" style={{ padding: 0 }} aria-label={`${t("prof.open")}: ${pick(p.name, p.name_bn)}`} onClick={() => setProf(true)}><Avatar kind="occupant" id={p.id} name={pick(p.name, p.name_bn)} size={40} /></button>
+        {prof && <ProfileModal kind="occupant" id={p.id} name={pick(p.name, p.name_bn)} onClose={() => setProf(false)} />}
       <div><b>{pick(p.name, p.name_bn)}</b> {p.kind === "owner" && <span className="small muted">· {p.resides ? t("unit.lives") : t("unit.rented")}</span>}<br />
-        <span className="small muted">{showContact && p.phone ? `${p.phone} · ` : ""}{p.end_date ? t("unit.till", { a: fdate(p.start_date), b: fdate(p.end_date) }) : t("unit.since", { d: fdate(p.start_date) })}</span></div>
+        <span className="small muted">{showContact && p.phone ? `${p.phone} · ` : ""}{p.end_date ? t("unit.till", { a: fdate(p.start_date), b: fdate(p.end_date) }) : t("unit.since", { d: fdate(p.start_date) })}</span></div></div>
       {p.has_login && <Chip tone="info">{t("unit.login")}</Chip>}
     </div>
   );

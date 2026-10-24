@@ -396,7 +396,7 @@ def remind(uid: int, body: RemindIn, ctx: Ctx = Depends(property_ctx), db: Sessi
     lang = (db.get(User, t.user_id).lang if t.user_id and db.get(User, t.user_id) else "bn") or "bn"
     text = (f"FlatWise: your flat owner has sent a rent reminder for {body.period} (flat {unit.number}). Please open Rental records." if lang == "en"
             else f"FlatWise: ফ্ল্যাট {unit.number}-এর {body.period} মাসের ভাড়ার বিষয়ে বাড়িওয়ালার রিমাইন্ডার। অনুগ্রহ করে ভাড়ার রেকর্ড দেখুন।")
-    msg = Message(property_id=ctx.property.id, unit_id=uid, to_name=t.name, to_phone=t.phone, template="rent_remind", lang=lang, body=text, idem_key=f"rr{uid}:{secrets.token_hex(6)}")
+    msg = Message(property_id=ctx.property.id, unit_id=uid, channel="sms", to_name=t.name, to_phone=t.phone, template="rent_remind", lang=lang, body=text, idem_key=f"rr{uid}:{secrets.token_hex(6)}")
     deliver(db, ctx.property.org_id, msg)          # not added to the session on purpose: the building's Messages list must not show it
     n = RentalNote(unit_id=uid, kind="reminder", period=body.period, body=text, sms_status=msg.status, created_by=ctx.user.id)
     db.add(n)

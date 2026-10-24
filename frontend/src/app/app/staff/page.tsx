@@ -1,6 +1,8 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
 import { Btn, Card, Chip, DataTable, Field, Modal, PageHead, Stat, Tabs, useToast } from "@/components/ui";
+import { Avatar } from "@/components/Avatar";
+import { ProfileModal } from "@/components/ProfilePanel";
 import { api, fdate, ftime, money } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useT } from "@/lib/i18n";
@@ -15,7 +17,7 @@ export default function Staff() {
   const { t, pick } = useT(); const { prop, has, user } = useAuth(); const toast = useToast();
   const edit = has("PROPERTY_ADMIN", "AGENCY_MANAGER", "SECRETARY"); const prepare = has("PROPERTY_ADMIN", "AGENCY_MANAGER", "TREASURER"); const approve = has("PROPERTY_ADMIN", "AGENCY_MANAGER", "PRESIDENT"); const reveal = approve;
   const [tab, setTab] = useState<"people" | "payroll">("people"); const [rows, setRows] = useState<S[]>([]); const [sheets, setSheets] = useState<Sh[]>([]); const [open, setOpen] = useState<Sh | null>(null);
-  const [form, setForm] = useState<Partial<S> | null>(null); const [nid, setNid] = useState<S | null>(null); const [newSheet, setNewSheet] = useState(false);
+  const [form, setForm] = useState<Partial<S> | null>(null); const [nid, setNid] = useState<S | null>(null); const [prof, setProf] = useState<S | null>(null); const [newSheet, setNewSheet] = useState(false);
   const load = useCallback(async () => { setRows(await api("/staff")); setSheets(await api("/staff/payroll/sheets")); }, []);
   useEffect(() => { load(); }, [load, prop?.id]);
   const openSheet = async (id: number) => setOpen(await api(`/staff/payroll/sheets/${id}`));
@@ -26,17 +28,18 @@ export default function Staff() {
 
     {tab === "people" && (<div className="stack"><div className="grid g3"><Stat label={t("staff.tab.people")} value={active.length} /><Stat label={t("staff.total_pay")} value={money(active.reduce((a, r) => a + r.salary, 0))} /></div>
       <DataTable rows={rows} pageSize={10} search={(r) => `${r.name} ${r.phone}`} cols={[
-        { key: "n", head: t("common.name"), render: (r) => <><b>{pick(r.name, r.name_bn || r.name)}</b><br /><span className="small muted">{t(`staff.role.${r.role}`)}</span></> }, { key: "p", head: t("staff.phone"), render: (r) => r.phone || "–" },
+        { key: "n", head: t("common.name"), render: (r) => <span className="row" style={{ gap: 10 }}><Avatar kind="staff" id={r.id} name={pick(r.name, r.name_bn || r.name)} size={36} /><span><b>{pick(r.name, r.name_bn || r.name)}</b><br /><span className="small muted">{t(`staff.role.${r.role}`)}</span></span></span> }, { key: "p", head: t("staff.phone"), render: (r) => r.phone || "–" },
         { key: "j", head: t("staff.joined"), render: (r) => <span className="nowrap">{fdate(r.joined)}</span> }, { key: "s", head: t("staff.salary"), num: true, render: (r) => money(r.salary) },
         { key: "i", head: t("staff.nid"), render: (r) => <span className="row" style={{ gap: 8 }}><code>{r.has_nid ? r.nid : t("staff.no_nid")}</code>{reveal && r.has_nid && <Btn size="sm" variant="ghost" onClick={() => setNid(r)}>{t("staff.reveal")}</Btn>}</span> },
         { key: "st", head: "", render: (r) => <Chip tone={r.status === "active" ? "ok" : "mute"}>{t(r.status === "active" ? "staff.active" : "staff.left")}</Chip> },
-        { key: "e", head: "", render: (r) => edit && r.status === "active" ? <Btn size="sm" variant="ghost" onClick={() => setForm(r)}>{t("common.edit")}</Btn> : null }]} /></div>)}
+        { key: "e", head: "", render: (r) => <span className="row" style={{ gap: 6 }}>{edit && r.status === "active" && <Btn size="sm" variant="ghost" onClick={() => setForm(r)}>{t("common.edit")}</Btn>}<Btn size="sm" variant="ghost" onClick={() => setProf(r)}>{t("prof.open")}</Btn></span> }]} /></div>)}
 
     {tab === "payroll" && !open && <DataTable rows={sheets} pageSize={12} cols={[{ key: "p", head: t("pay.sheet"), render: (r) => <b>{r.period}</b> }, { key: "n", head: "", render: (r) => t("pay.people", { n: r.people }) }, { key: "t", head: t("pay.total"), num: true, render: (r) => <b>{money(r.total)}</b> },
       { key: "s", head: t("common.status"), render: (r) => <Chip tone={tone(r.status)}>{t(`pay.st.${r.status}`)}</Chip> }, { key: "o", head: "", render: (r) => <Btn size="sm" variant="soft" onClick={() => openSheet(r.id)}>{t("common.view")}</Btn> }]} />}
     {tab === "payroll" && open && <SheetView sh={open} prepare={prepare} approve={approve && open.created_by_id !== user?.id} onBack={() => { setOpen(null); load(); }} onChange={async () => { await openSheet(open.id); load(); }} toast={toast.show} />}
 
     {form && <StaffForm s={form} onClose={() => setForm(null)} onDone={() => { setForm(null); toast.show(t("staff.saved")); load(); }} onLeave={async (id) => { await api(`/staff/${id}/leave`, { method: "POST" }); setForm(null); load(); }} />}
+    {prof && <ProfileModal kind="staff" id={prof.id} name={pick(prof.name, prof.name_bn || prof.name)} onClose={() => setProf(null)} />}
     {nid && <NidModal s={nid} onClose={() => setNid(null)} />}
     {newSheet && <NewSheetModal onClose={() => setNewSheet(false)} onDone={(id) => { setNewSheet(false); load(); openSheet(id); }} />}
     {toast.node}
