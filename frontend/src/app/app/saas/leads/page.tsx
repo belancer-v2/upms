@@ -4,6 +4,7 @@ import { Btn, Card, Chip, Modal, PageHead } from "@/components/ui";
 import { api, fdate, ftime } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useT } from "@/lib/i18n";
+import { LeadMailTimeline } from "@/components/mailbits";
 
 type Lead = { id: number; name: string; phone: string; email: string; building: string; flats: number; city: string; message: string; source: string; status: string; owner: string; owner_id: number | null; created_at: string; notes: { id: number; text: string; at: string; by: string }[] };
 const COLS = ["new", "contacted", "demo", "trial", "won", "lost"];
@@ -38,6 +39,7 @@ export default function Leads() {
       {open && <Modal title={open.name} onClose={() => setOpen(null)}>
         <dl className="kv"><dt>{t("site.demo.building")}</dt><dd>{open.building || "—"} · {open.city}</dd><dt>{t("site.demo.flats")}</dt><dd>{open.flats || "—"}</dd><dt>{t("site.demo.phone")}</dt><dd>{open.phone}</dd><dt>{t("auth.email")}</dt><dd>{open.email || "—"}</dd><dt>{t("saas.leads.owner")}</dt><dd>{open.owner || t("saas.leads.unassigned")}</dd><dt>{t("common.date")}</dt><dd>{fdate(open.created_at)} · {open.source}</dd></dl>
         {open.message && <p style={{ marginTop: 14 }}>{open.message}</p>}
+        <LeadMailTimeline leadId={open.id} />
         <h3 style={{ margin: "18px 0 8px" }}>{t("saas.leads.notes")}</h3>
         <ul className="list-dot">{open.notes.map((n) => <li key={n.id}><span>{n.text} <span className="muted small">· {n.by} · {ftime(n.at)}</span></span></li>)}</ul>
         <div className="row" style={{ marginTop: 12 }}><input className="input" placeholder={t("saas.leads.note")} value={note} onChange={(e) => setNote(e.target.value)} /><Btn onClick={addNote}>{t("saas.leads.add")}</Btn></div></Modal>}

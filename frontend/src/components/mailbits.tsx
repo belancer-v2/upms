@@ -36,3 +36,20 @@ export function usePaged<T>(path: string, extra: Record<string, string | number>
 }
 
 export const pct = (n: number) => `${n.toFixed(1)}%`;
+
+type TlEvent = { outbox_id: number; name: string; name_bn: string; event: string; at: string };
+/** "Email: Welcome sent / opened" entries and the consent source, shown on the lead page. */
+export function LeadMailTimeline({ leadId }: { leadId: number }) {
+  const { t, pick } = useT();
+  const [d, setD] = useState<{ consent: { source: string } | null; suppressed: string; events: TlEvent[] } | null>(null);
+  useEffect(() => { api<any>(`/saas/mail/leads/${leadId}/timeline`).then(setD).catch(() => setD(null)); }, [leadId]);
+  if (!d) return null;
+  return (
+    <>
+      <h3 style={{ margin: "18px 0 8px" }}>{t("mail.lead.title")}</h3>
+      <p className="small muted" style={{ margin: "0 0 6px" }}>{t("mail.lead.consent")}: {d.consent ? d.consent.source : "—"}{d.suppressed && <> · <Chip tone="warn">{t("mail.lead.suppressed")}</Chip></>}</p>
+      <ul className="list-dot">{d.events.slice(0, 8).map((e, i) => <li key={i}><span>{t("mail.lead.ev", { n: pick(e.name, e.name_bn), e: t(`mail.ev.${e.event}`) })} <span className="muted small">· {new Date(e.at).toLocaleString("en-GB", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}</span></span></li>)}
+        {!d.events.length && <li><span className="muted small">{t("mail.lead.none")}</span></li>}</ul>
+    </>
+  );
+}

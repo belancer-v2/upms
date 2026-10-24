@@ -21,7 +21,7 @@ export default function Invoices() {
       <PageHead title={t("saas.inv.title")} sub={t("saas.inv.sub")} actions={<><input className="input" style={{ width: 150 }} type="month" value={period} onChange={(e) => setPeriod(e.target.value)} aria-label={t("saas.inv.period")} /><Btn onClick={run}>{t("saas.inv.run")}</Btn></>} />
       <div style={{ marginBottom: 16 }}><Tabs value={f} onChange={setF} items={[{ id: "all", label: `${t("common.all")} · ${rows.length}` }, ...["issued", "overdue", "paid"].map((s) => ({ id: s, label: `${t(`inv.${s}`)} · ${rows.filter((r) => r.status === s).length}` }))]} /></div>
       <DataTable rows={view} search={(r) => `${r.number} ${r.org}`} cols={[
-        { key: "number", head: t("saas.inv.number"), render: (r) => <b>{r.number}</b> },
+        { key: "number", head: t("saas.inv.number"), render: (r) => <a href={`/app/saas/invoice/${r.id}`}><b>{r.number}</b></a> },
         { key: "org", head: t("saas.inv.customer") },
         { key: "kind", head: t("saas.inv.period"), render: (r) => `${t(`saas.inv.kind.${r.kind}`)} ${r.period}` },
         { key: "amount", head: t("common.amount"), num: true, render: (r) => money(r.amount) },
