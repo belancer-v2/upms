@@ -28,7 +28,7 @@ Demo logins (password `demo1234`) are listed on the sign-in page when `DEMO=1`.
 | M7 Staff and payroll | done |
 | M8 Notices and policies | done |
 | M9 Tenant onboarding and DMP pack | done |
-| M10 Complaints and committee | planned |
+| M10 Complaints and committee | done |
 
 ## User types
 SaaS team: Super Admin, SaaS Admin, SaaS Finance, SaaS Sales, SaaS User.

@@ -1,0 +1,14 @@
+{ "module": "m10-14-extras", "shots": [
+  { "name": "m10-01-requests-president", "path": "/app/requests", "as": "president", "full": true },
+  { "name": "m10-02-committee-members", "path": "/app/committee", "as": "president", "full": true },
+  { "name": "m10-03-tenant-raises-request-bangla", "path": "/app/requests", "as": "tenant", "lang": "bn", "full": true },
+  { "name": "m11-01-people-with-photos", "path": "/app/people", "as": "padmin", "full": true },
+  { "name": "m11-02-my-profile-editor", "path": "/app/profile", "as": "owner", "full": true },
+  { "name": "m11-03-staff-with-photos", "path": "/app/staff", "as": "padmin", "full": true },
+  { "name": "m12-01-monthly-budget-grid", "path": "/app/finance", "as": "treasurer", "click": ["[role=tab]:has-text('Monthly budget')"], "full": true },
+  { "name": "m13-01-tenant-pay-now", "path": "/app/pay", "as": "tenant", "click": ["button:has-text('Pay now')"] },
+  { "name": "m13-02-gateway-admin-settings", "path": "/app/billing", "as": "padmin", "click": ["[role=tab]:has-text('Charges')"], "full": true },
+  { "name": "m14-01-owner-rental-records", "path": "/app/rental", "as": "owner2", "full": true },
+  { "name": "m14-02-tenant-rental-bangla-night", "path": "/app/rental", "as": "tenant", "lang": "bn", "theme": "dark", "full": true },
+  { "name": "m14-03-money-receipt-mobile", "path": "/app/rental", "as": "owner2", "w": 390, "h": 844, "full": true }
+] }
