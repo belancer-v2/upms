@@ -353,7 +353,36 @@ def seed_billing(db, ctx):
     db.flush()
 
 
-EXTRA_SEEDS: list = [seed_plans, seed_saas_demo, seed_units, seed_billing]  # later modules append their seed functions here
+def seed_cash(db, ctx):
+    from datetime import timedelta
+    from .models.billing import Invoice, Payment
+    from .models.cash import CashEntry, Remittance
+    from .models.property import Unit
+    sun = ctx["sunrise"]
+    ct = db.scalar(select(User).where(User.email == "caretaker@flatwise.demo"))
+    trs = db.scalar(select(User).where(User.email == "treasurer@flatwise.demo"))
+    cash = db.scalars(select(Payment).join(Invoice, Invoice.id == Payment.invoice_id).where(Payment.property_id == sun.id, Payment.method == "cash", Payment.status == "verified").order_by(Payment.paid_on.desc())).all()
+    if not ct or len(cash) < 12:
+        return
+    older, recent = cash[6:12], cash[:4]
+    rem = Remittance(property_id=sun.id, collector_id=ct.id, amount=sum(p.amount for p in older), status="accepted", decided_by=trs.id if trs else None, decided_at=now() - timedelta(days=9))
+    db.add(rem); db.flush()
+    for p in older:
+        db.add(CashEntry(property_id=sun.id, invoice_id=p.invoice_id, unit_id=p.unit_id, amount=p.amount, collector_id=ct.id, mode="otp", status="remitted", payment_id=p.id, remittance_id=rem.id, confirmed_at=now() - timedelta(days=12)))
+    sub = Remittance(property_id=sun.id, collector_id=ct.id, amount=sum(p.amount for p in recent[2:]), status="submitted")
+    db.add(sub); db.flush()
+    for k, p in enumerate(recent):
+        db.add(CashEntry(property_id=sun.id, invoice_id=p.invoice_id, unit_id=p.unit_id, amount=p.amount, collector_id=ct.id, mode="otp", status="held" if k < 2 else "handover", payment_id=p.id,
+                         remittance_id=None if k < 2 else sub.id, confirmed_at=now() - timedelta(days=2)))
+    # one open entry waiting for the payer, and one waiting for the treasurer
+    b302 = db.scalar(select(Unit).where(Unit.property_id == sun.id, Unit.number == "B-302"))
+    inv = db.scalar(select(Invoice).where(Invoice.unit_id == b302.id, Invoice.period == "2026-10")) if b302 else None
+    if inv:
+        db.add(CashEntry(property_id=sun.id, invoice_id=inv.id, unit_id=inv.unit_id, amount=100000, collector_id=ct.id, mode="otp", status="pending", code_hash="x", code_expires=now() + timedelta(minutes=4)))
+    db.flush()
+
+
+EXTRA_SEEDS: list = [seed_plans, seed_saas_demo, seed_units, seed_billing, seed_cash]  # later modules append their seed functions here
 
 if __name__ == "__main__":
     run()

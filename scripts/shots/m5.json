@@ -1,0 +1,8 @@
+{ "module": "m5-cash-collection", "shots": [
+  { "name": "01-caretaker-cash-desk", "path": "/app/cash", "as": "caretaker", "full": true },
+  { "name": "02-take-cash-form", "path": "/app/cash", "as": "caretaker", "select": null, "click": ["button:has-text('Enter code')"] },
+  { "name": "03-treasurer-accepts-handover", "path": "/app/cash", "as": "treasurer", "full": true },
+  { "name": "04-payer-confirms-cash", "path": "/app/pay", "as": "tenant" },
+  { "name": "05-cash-desk-bangla-night", "path": "/app/cash", "as": "caretaker", "lang": "bn", "theme": "dark", "full": true },
+  { "name": "06-cash-desk-mobile", "path": "/app/cash", "as": "caretaker", "w": 390, "h": 844, "full": true }
+] }

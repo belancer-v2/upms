@@ -1,0 +1,26 @@
+export const cashDict = {
+  en: {
+    "nav.cash": "Cash desk",
+    "cash.title": "Cash desk", "cash.sub": "Cash taken from residents: confirmed by the payer, counted as custody, handed to the treasurer.",
+    "cash.custody": "Cash in hand", "cash.limit": "Limit {a}", "cash.held": "Confirmed, in hand", "cash.pending": "Waiting for payer", "cash.handover": "With treasurer, to accept",
+    "cash.collect": "Take cash", "cash.flat": "Flat and month", "cash.pick": "Choose an unpaid invoice", "cash.amount": "Amount received (BDT)", "cash.take": "Take cash and send code", "cash.take_link": "Take cash and ask payer to confirm",
+    "cash.sent_code": "Code sent to the payer by SMS. Ask for the 6 digits.", "cash.demo_code": "Demo only: the code is {c}", "cash.link_note": "The payer will see this in My dues and taps Confirm.",
+    "cash.entries": "Cash entries", "cash.handovers": "Hand-overs", "cash.when": "When", "cash.by": "Taken by", "cash.enter_code": "Enter code", "cash.code": "6-digit code", "cash.resend": "Send a new code", "cash.cancel": "Cancel entry",
+    "cash.locked": "Locked for 1 hour after 3 wrong codes. The payer can still confirm in the app.", "cash.expired": "Code expired", "cash.tries": "{n} tries left",
+    "cash.hand": "Hand all to the treasurer", "cash.hand_done": "Hand-over sent to the treasurer.", "cash.accept": "Accept cash", "cash.reject": "Not received", "cash.empty_hand": "No confirmed cash to hand over.", "cash.confirmed": "Cash confirmed.",
+    "cash.st.pending": "Waiting for payer", "cash.st.held": "In hand", "cash.st.handover": "Handed over", "cash.st.remitted": "With treasurer", "cash.st.cancelled": "Cancelled", "cash.st.submitted": "To accept", "cash.st.accepted": "Accepted", "cash.st.rejected": "Not received",
+    "cash.payer_title": "Cash you handed over", "cash.payer_note": "The caretaker says they took {a} in cash. Confirm only if you handed it over.", "cash.payer_confirm": "Yes, I paid",
+  },
+  bn: {
+    "nav.cash": "ক্যাশ ডেস্ক",
+    "cash.title": "ক্যাশ ডেস্ক", "cash.sub": "বাসিন্দাদের কাছ থেকে নেওয়া নগদ: দাতা নিশ্চিত করেন, হাতে জমা থাকে, তারপর কোষাধ্যক্ষকে বুঝিয়ে দেওয়া হয়।",
+    "cash.custody": "হাতে থাকা নগদ", "cash.limit": "সীমা {a}", "cash.held": "নিশ্চিত, হাতে আছে", "cash.pending": "দাতার অপেক্ষায়", "cash.handover": "কোষাধ্যক্ষের কাছে, গ্রহণ বাকি",
+    "cash.collect": "নগদ নিন", "cash.flat": "ফ্ল্যাট ও মাস", "cash.pick": "একটি অপরিশোধিত ইনভয়েস বেছে নিন", "cash.amount": "প্রাপ্ত পরিমাণ (BDT)", "cash.take": "নগদ নিন ও কোড পাঠান", "cash.take_link": "নগদ নিন ও দাতাকে নিশ্চিত করতে বলুন",
+    "cash.sent_code": "দাতার কাছে এসএমএসে কোড গেছে। ৬ সংখ্যা জেনে নিন।", "cash.demo_code": "শুধু ডেমো: কোডটি {c}", "cash.link_note": "দাতা আমার বকেয়া পাতায় দেখে নিশ্চিত করবেন।",
+    "cash.entries": "নগদ এন্ট্রি", "cash.handovers": "হস্তান্তর", "cash.when": "কখন", "cash.by": "যিনি নিয়েছেন", "cash.enter_code": "কোড দিন", "cash.code": "৬ সংখ্যার কোড", "cash.resend": "নতুন কোড পাঠান", "cash.cancel": "এন্ট্রি বাতিল",
+    "cash.locked": "৩ বার ভুল কোডের পর ১ ঘণ্টা বন্ধ। দাতা তবুও অ্যাপে নিশ্চিত করতে পারবেন।", "cash.expired": "কোডের মেয়াদ শেষ", "cash.tries": "আর {n} বার চেষ্টা",
+    "cash.hand": "সব কোষাধ্যক্ষকে বুঝিয়ে দিন", "cash.hand_done": "কোষাধ্যক্ষের কাছে হস্তান্তর পাঠানো হয়েছে।", "cash.accept": "নগদ গ্রহণ", "cash.reject": "পাইনি", "cash.empty_hand": "বুঝিয়ে দেওয়ার মতো নিশ্চিত নগদ নেই।", "cash.confirmed": "নগদ নিশ্চিত হয়েছে।",
+    "cash.st.pending": "দাতার অপেক্ষায়", "cash.st.held": "হাতে আছে", "cash.st.handover": "হস্তান্তরিত", "cash.st.remitted": "কোষাধ্যক্ষের কাছে", "cash.st.cancelled": "বাতিল", "cash.st.submitted": "গ্রহণ বাকি", "cash.st.accepted": "গৃহীত", "cash.st.rejected": "পাইনি",
+    "cash.payer_title": "আপনার দেওয়া নগদ", "cash.payer_note": "কেয়ারটেকার বলছেন তিনি {a} নগদ নিয়েছেন। আপনি দিয়ে থাকলেই কেবল নিশ্চিত করুন।", "cash.payer_confirm": "হ্যাঁ, আমি দিয়েছি",
+  },
+} as const;
