@@ -29,6 +29,10 @@ Demo logins (password `demo1234`) are listed on the sign-in page when `DEMO=1`.
 | M8 Notices and policies | done |
 | M9 Tenant onboarding and DMP pack | done |
 | M10 Complaints and committee | done |
+| M11 Profiles with photo and optional details | done |
+| M12 Monthly budget setting | done |
+| M13 Payment gateway, sandbox only | done |
+| M14 Owner rental records add-on | done |
 
 ## User types
 SaaS team: Super Admin, SaaS Admin, SaaS Finance, SaaS Sales, SaaS User.
