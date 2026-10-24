@@ -159,10 +159,8 @@ def seed_saas_reports(db, ctx):
         if not inc or act < 40:
             continue
         for k in range(1, min(11, act // 30) + 1):
-            use = int(inc * rnd.uniform(.5, .95))
-            db.add(SmsLedger(org_id=org.id, delta=inc, reason=f"Monthly allowance", at=ago(act - 30 * k + 1 if act - 30 * k + 1 > 0 else 1)))
+            db.add(SmsLedger(org_id=org.id, delta=inc, reason="Monthly allowance", at=ago(act - 30 * k + 1 if act - 30 * k + 1 > 0 else 1)))
             db.add(SmsLedger(org_id=org.id, delta=-inc, reason="SMS sent", at=ago(act - 30 * k + 15 if act - 30 * k + 15 > 0 else 1)))
-            _ = use
 
     # ---- a refund and two voided invoices with credit notes
     db.flush()

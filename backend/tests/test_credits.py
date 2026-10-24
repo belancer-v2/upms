@@ -183,7 +183,7 @@ def test_vat_line_and_sales_list(client):
         assert inv["vat"] == 12000 and inv["subtotal"] == pk["price"] and inv["total"] == pk["total"] and inv["vat_bps"] == 1500
     finally:
         client.put("/api/saas/credits/settings", headers=H(client, "finance"), json={"vat_bps": 0})
-    s = client.get("/api/saas/credits/sales?q=Sunrise&status=paid", headers=H(client, "finance")).json()
+    s = client.get("/api/saas/credits/sales?q=SMS&status=paid", headers=H(client, "finance")).json()
     assert s["total"] >= 1 and s["paid_total"] > 0 and "org" in s["rows"][0]
 
 

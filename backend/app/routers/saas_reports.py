@@ -727,6 +727,7 @@ def email(invoice_id: int, user: User = Depends(require_saas(*MONEY)), db: Sessi
     """Renders the invoice into the sandbox outbox (services/mailer.py, M20). If that module is missing, nothing happens and that is not an error."""
     inv = _need_inv(db, invoice_id)
     doc = docs.issue_doc(db, inv, user.id)
+    db.commit()
     sent = False
     if importlib.util.find_spec("app.services.mailer") is not None:
         try:

@@ -545,6 +545,7 @@ def dispatch(db: Session, c: MailCampaign, at: datetime | None = None) -> dict:
             break
         _deliver(db, row, tpl, at, c.simulate, f"{c.id}:{row.to_email}")
         sent += 1
+    db.flush()
     left = db.scalar(select(func.count()).select_from(MailOutbox).where(MailOutbox.campaign_id == c.id, MailOutbox.status == "queued")) or 0
     if left == 0:
         c.status, c.finished_at = "sent", at

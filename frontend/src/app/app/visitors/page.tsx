@@ -115,7 +115,7 @@ function Gate() {
     {err && <p className="error" role="alert">{err}</p>}
     <div className="grid g4" style={{ marginBottom: 16 }}>
       <Stat label={t("vs.s.today")} value={board?.counts.today ?? "–"} /><Stat label={t("vs.s.inside")} value={board?.counts.inside ?? "–"} />
-      <Stat label={t("vs.s.waiting")} value={board?.counts.waiting ?? "–"} /><Stat label={t("vs.s.overstay")} value={<span style={{ color: board?.counts.overstay ? "var(--bad)" : undefined }}>{board?.counts.overstay ?? "–"}</span>} /></div>
+      <Stat label={t("vs.s.waiting")} value={board?.counts.waiting ?? "–"} /><Stat label={t("vs.s.overstay", { h: board?.counts.overstay_hours ?? 12 })} value={<span style={{ color: board?.counts.overstay ? "var(--bad)" : undefined }}>{board?.counts.overstay ?? "–"}</span>} /></div>
     <div className="grid g4" style={{ marginBottom: 20, gap: 12 }}>
       <Btn style={big} onClick={() => setModal("new")}>{t("vs.new")}</Btn>
       <Btn style={big} variant="soft" onClick={() => setModal("delivery")}>{t("vs.delivery")}</Btn>

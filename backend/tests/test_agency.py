@@ -92,7 +92,7 @@ def test_roster_conflict_warnings(client):
     sid = mk_person(client, pa, a["id"], "Roster Guard")
     sh = shift_ids(client, pa)
     post = client.post("/api/agency/posts", json={"name": "Test gate", "kind": "security", "headcount": 1, "agency_id": a["id"]}, headers=ct).json()
-    base = week_start(_today() + timedelta(days=150))
+    base = week_start(_today() - timedelta(days=200))
     first = slot(client, ct, base, post["id"], sh["Day"], sid)
     assert first["warnings"] == []
     second = slot(client, ct, base, post["id"], sh["Evening"], sid)                    # two shifts the same day, 16 hours
@@ -212,7 +212,8 @@ def test_replacement_request_and_substitute(client):
     assert [p for p in people if p["name"] == "Temp Guard"][0]["agency"]["substitute"] is True
     # a direct employee has no agency to ask
     direct = client.get("/api/staff", headers=pa).json()[0]["id"]
-    s2 = slot(client, ct, d, post["id"], sh["Day"], direct)
+    own = client.post("/api/agency/posts", json={"name": "Own post", "kind": "security"}, headers=ct).json()
+    s2 = slot(client, ct, d, own["id"], sh["Day"], direct)
     client.post(f"/api/agency/roster/slots/{s2['id']}/mark", json={"status": "absent"}, headers=ct)
     assert client.post("/api/agency/replacements", json={"slot_id": s2["id"]}, headers=ct).status_code == 422
 

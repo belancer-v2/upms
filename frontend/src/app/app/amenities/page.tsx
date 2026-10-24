@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Btn, Card, Chip, Empty, Field, Modal, PageHead, Stat, Tabs, useToast } from "@/components/ui";
+import { Btn, Card, Chip, Empty, Field, Modal, PageHead, Tabs, useToast } from "@/components/ui";
 import { Pager } from "@/components/pager";
 import { api, fdate, money } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -56,7 +56,7 @@ export default function Amenities() {
     <PageHead title={t("am.title")} sub={t("am.sub")} actions={resident && amenity ? <Btn onClick={() => setForm({ date: "", slot: "" })}>{t("am.request")}</Btn> : undefined} />
     <div style={{ marginBottom: 14 }}><Tabs value={tab} onChange={setTab} items={tabs} /></div>
     {!list ? <p className="muted">{t("common.loading")}</p> : <>
-      {tab === "cal" && <CalendarTab list={list} aid={aid} setAid={setAid} resident={resident} onPick={(d, s) => setForm({ date: d, slot: s })} onOpen={(id) => { setTab(decide ? "queue" : "mine"); void id; }} />}
+      {tab === "cal" && <CalendarTab list={list} aid={aid} setAid={setAid} resident={resident} onPick={(d, s) => setForm({ date: d, slot: s })} />}
       {tab === "mine" && <BookingList scope="mine" decide={false} onChange={() => { loadList(); }} toast={toast} amenities={list} />}
       {tab === "queue" && <BookingList scope="all" decide={decide} onChange={loadList} toast={toast} amenities={list} />}
       {tab === "set" && <Settings list={list} onChange={loadList} toast={toast} />}
@@ -66,7 +66,7 @@ export default function Amenities() {
   </>);
 }
 
-function CalendarTab({ list, aid, setAid, resident, onPick }: { list: Amenity[]; aid: number; setAid: (n: number) => void; resident: boolean; onPick: (d: string, s: string) => void; onOpen: (id: number) => void }) {
+function CalendarTab({ list, aid, setAid, resident, onPick }: { list: Amenity[]; aid: number; setAid: (n: number) => void; resident: boolean; onPick: (d: string, s: string) => void }) {
   const { t, pick, lang } = useT(); const [month, setMonth] = useState(ymd(new Date()).slice(0, 7)); const [cal, setCal] = useState<Cal | null>(null); const [day, setDay] = useState<Day | null>(null);
   useEffect(() => { if (aid) api<Cal>(`/amenities/${aid}/calendar?month=${month}`).then(setCal); }, [aid, month]);
   const pad = useMemo(() => { if (!cal) return 0; const [y, m] = cal.month.split("-").map(Number); return (new Date(y, m - 1, 1).getDay() + 6) % 7; }, [cal]);   // week starts Monday

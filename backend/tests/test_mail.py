@@ -258,7 +258,8 @@ def test_seed_has_demo_data(client):
     assert len(sent) == 3 and all(c["stats"]["sent"] > 0 for c in sent)
     assert client.get(f"{B}/suppression", headers=h).json()["total"] >= 4
     leads = client.get("/api/saas/leads", headers=h).json()
-    tl = client.get(f"{B}/leads/{leads[0]['id']}/timeline", headers=h).json()
+    lead = [l for l in leads if l["name"] == "Anisul Haque"][0]
+    tl = client.get(f"{B}/leads/{lead['id']}/timeline", headers=h).json()
     assert tl["consent"]["source"] and any(e["event"] == "sent" for e in tl["events"])
 
 
