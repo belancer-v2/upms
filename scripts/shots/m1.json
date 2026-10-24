@@ -1,0 +1,10 @@
+{ "module": "m1-landing", "shots": [
+  { "name": "01-home-day-en", "path": "/", "full": true },
+  { "name": "02-home-night-bn", "path": "/", "lang": "bn", "theme": "dark", "full": true },
+  { "name": "03-pricing-en", "path": "/pricing", "full": true },
+  { "name": "04-pricing-bn-large-band", "path": "/pricing", "lang": "bn", "click": ["button:has-text('৮১ থেকে ২০০')"], "full": true },
+  { "name": "05-features", "path": "/features", "full": true },
+  { "name": "06-book-demo", "path": "/demo" },
+  { "name": "07-signup-trial", "path": "/signup?plan=standard", "full": true },
+  { "name": "08-home-mobile", "path": "/", "w": 390, "h": 844, "full": true }
+] }

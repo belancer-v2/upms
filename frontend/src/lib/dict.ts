@@ -1,8 +1,9 @@
 import { core } from "./i18n/core";
 import { rolesDict } from "./i18n/roles";
+import { feat, site } from "./i18n/site";
 
 type D = Record<string, string>;
-const modules: { en: D; bn: D }[] = [core as unknown as { en: D; bn: D }, rolesDict as unknown as { en: D; bn: D }];
+const modules: { en: D; bn: D }[] = [core as unknown as { en: D; bn: D }, rolesDict as unknown as { en: D; bn: D }, site as unknown as { en: D; bn: D }, feat as unknown as { en: D; bn: D }];
 
 export const dict: { en: D; bn: D } = {
   en: Object.assign({}, ...modules.map((m) => m.en)),

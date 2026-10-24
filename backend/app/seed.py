@@ -75,7 +75,31 @@ def run():
     print("Seeded. Demo password:", PASSWORD)
 
 
-EXTRA_SEEDS: list = []  # later modules append their seed functions here
+def seed_plans(db, ctx):
+    from .models.saas import Plan, Subscription
+    P = 100  # paisa per taka
+    base = {"S": 1, "M": 1, "L": 1}
+    db.add_all([
+        Plan(key="basic", name="Basic", name_bn="বেসিক", sort=1,
+             monthly={"S": 1500 * P, "M": 2500 * P, "L": 4000 * P}, setup={"S": 3000 * P, "M": 5000 * P, "L": 8000 * P},
+             sms_included={"S": 200, "M": 500, "L": 1000},
+             features=["billing", "expenses", "notices", "resident_web", "reports"]),
+        Plan(key="standard", name="Standard", name_bn="স্ট্যান্ডার্ড", sort=2,
+             monthly={"S": 3000 * P, "M": 4500 * P, "L": 7000 * P}, setup={"S": 3000 * P, "M": 5000 * P, "L": 8000 * P},
+             sms_included={"S": 200, "M": 500, "L": 1000},
+             features=["billing", "expenses", "notices", "resident_web", "reports", "staff", "assets", "tenant_dmp", "reminders", "caretaker_app", "cash_confirm", "policies"]),
+        Plan(key="pro", name="Pro", name_bn="প্রো", sort=3,
+             monthly={"S": 5000 * P, "M": 7500 * P, "L": 11000 * P}, setup={"S": 3000 * P, "M": 5000 * P, "L": 8000 * P},
+             sms_included={"S": 200, "M": 500, "L": 1000},
+             features=["billing", "expenses", "notices", "resident_web", "reports", "staff", "assets", "tenant_dmp", "reminders", "caretaker_app", "cash_confirm", "policies",
+                       "resident_portal", "visitor", "amenities", "parking", "maintenance", "cash_otp", "priority_support"]),
+    ])
+    db.flush()
+    # the demo agency and its three buildings run on Pro
+    db.add(Subscription(org_id=ctx["agency"].id, plan_key="pro", band="M", flats=96, status="active"))
+
+
+EXTRA_SEEDS: list = [seed_plans]  # later modules append their seed functions here
 
 if __name__ == "__main__":
     run()
