@@ -70,6 +70,7 @@ class Message(Base):
     unit_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
     to_name: Mapped[str] = mapped_column(String(120), default="")
     to_phone: Mapped[str] = mapped_column(String(32), default="")
+    to_email: Mapped[str] = mapped_column(String(160), default="")
     channel: Mapped[str] = mapped_column(String(8), default="sms")
     template: Mapped[str] = mapped_column(String(30))
     lang: Mapped[str] = mapped_column(String(2), default="bn")

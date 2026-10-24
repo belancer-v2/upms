@@ -12,6 +12,9 @@ from .requests import CommitteeMember, Meeting, Proposal, ProposalVote, RequestC
 from .gateway import GatewayConfig, GatewaySession  # noqa
 from .budget import BudgetLock, BudgetMonth  # noqa
 from .profile import Profile  # noqa
+from .parking import ParkingAllocation, ParkingEntitlement, ParkingSetting, ParkingSlot, ParkingVisit, Vehicle  # noqa
 from .amenities import Amenity, Blackout, Booking, SlotHold  # noqa
 from .rental import RentalAgreement, RentalComment, RentalFollowup, RentalIssue, RentalNote, RentalPayment, RentalSetting  # noqa
+from .credits import CreditPack, CreditPurchase, CreditSetting, EmailLedger, PlatformSetting  # noqa
 from .agency import Agency, AgencyBill, AgencyDoc, AgencySetting, Post, Replacement, RosterSlot, ShiftDef, StaffPosting  # noqa
+from .visitors import FrequentVisitor, Visit, VisitorNotice, VisitorPass, VisitorSetting  # noqa

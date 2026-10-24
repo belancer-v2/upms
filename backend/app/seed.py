@@ -87,7 +87,7 @@ def seed_plans(db, ctx):
         Plan(key="standard", name="Standard", name_bn="স্ট্যান্ডার্ড", sort=2,
              monthly={"S": 3000 * P, "M": 4500 * P, "L": 7000 * P}, setup={"S": 3000 * P, "M": 5000 * P, "L": 8000 * P},
              sms_included={"S": 200, "M": 500, "L": 1000},
-             features=["billing", "expenses", "notices", "resident_web", "reports", "staff", "assets", "tenant_dmp", "reminders", "caretaker_app", "cash_confirm", "policies", "committee", "rental_records", "amenities"]),
+             features=["billing", "expenses", "notices", "resident_web", "reports", "staff", "assets", "tenant_dmp", "reminders", "caretaker_app", "cash_confirm", "policies", "committee", "rental_records", "amenities", "parking"]),
         Plan(key="pro", name="Pro", name_bn="প্রো", sort=3,
              monthly={"S": 5000 * P, "M": 7500 * P, "L": 11000 * P}, setup={"S": 3000 * P, "M": 5000 * P, "L": 8000 * P},
              sms_included={"S": 200, "M": 500, "L": 1000},
@@ -721,6 +721,16 @@ from .seed_requests import seed_requests  # noqa: E402
 EXTRA_SEEDS.append(seed_requests)
 from .seed_amenities import seed_amenities  # noqa: E402
 EXTRA_SEEDS.append(seed_amenities)
+from .seed_parking import seed_parking  # noqa: E402
+EXTRA_SEEDS.append(seed_parking)
+
+from .seed_visitors import seed_visitors  # noqa: E402
+EXTRA_SEEDS.append(seed_visitors)
+
+from .seed_agency import seed_agency  # noqa: E402
+EXTRA_SEEDS.append(seed_agency)
+from .seed_credits import seed_credits  # noqa: E402
+EXTRA_SEEDS.append(seed_credits)
 
 if __name__ == "__main__":
     run()

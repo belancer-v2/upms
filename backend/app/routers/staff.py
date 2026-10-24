@@ -11,6 +11,7 @@ from ..db import get_db
 from ..deps import Ctx, property_ctx
 from ..models.billing import Message
 from ..models.core import User
+from ..models.agency import StaffPosting, posting_map
 from ..models.staff import NidView, SalaryLine, SalarySheet, Staff
 from ..permissions import COMMITTEE, MANAGE
 from ..services import ledger, vault
@@ -45,10 +46,16 @@ class StaffIn(BaseModel):
 
 
 @router.get("")
-def staff(ctx: Ctx = Depends(property_ctx), db: Session = Depends(get_db)):
+def staff(employer: str = "", ctx: Ctx = Depends(property_ctx), db: Session = Depends(get_db)):
     _gate(ctx)
     ctx.need(*VIEW)
-    return [_s(s) for s in db.scalars(select(Staff).where(Staff.property_id == ctx.property.id).order_by(Staff.status, Staff.role, Staff.name))]
+    links = posting_map(db, ctx.property.id)
+    rows = [{**_s(s), "agency": links.get(s.id)} for s in db.scalars(select(Staff).where(Staff.property_id == ctx.property.id).order_by(Staff.status, Staff.role, Staff.name))]
+    if employer == "all":   # default is the building's own staff; agency staff are listed on request (M18)
+        return rows
+    if employer.isdigit():
+        return [r for r in rows if r["agency"] and r["agency"]["agency_id"] == int(employer)]
+    return [r for r in rows if not r["agency"]]
 
 
 @router.post("", status_code=201)
@@ -172,7 +179,7 @@ def new_sheet(body: NewSheet, ctx: Ctx = Depends(property_ctx), db: Session = De
         raise HTTPException(422, "Period must look like 2026-10")
     if db.scalar(select(SalarySheet.id).where(SalarySheet.property_id == ctx.property.id, SalarySheet.period == p)):
         raise HTTPException(409, "A salary sheet for this month already exists")
-    people = db.scalars(select(Staff).where(Staff.property_id == ctx.property.id, Staff.status == "active")).all()
+    people = db.scalars(select(Staff).where(Staff.property_id == ctx.property.id, Staff.status == "active", Staff.id.not_in(select(StaffPosting.staff_id)))).all()   # agency staff are paid by their agency
     if not people:
         raise HTTPException(422, "Add staff first")
     sh = SalarySheet(property_id=ctx.property.id, period=p, created_by=ctx.user.id)

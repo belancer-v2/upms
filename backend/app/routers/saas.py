@@ -246,6 +246,9 @@ def run_invoices(body: RunIn, user: User = Depends(require_saas(*MONEY)), db: Se
         amt = int(monthly_price(db, sub) * (10 if yearly else 1))
         _new_invoice(db, sub.org_id, "subscription", period, f"{plan.name} · {sub.band} · {period}", amt, 10)
         db.add(SmsLedger(org_id=sub.org_id, delta=plan.sms_included.get(sub.band, 0), reason=f"Monthly allowance {body.period}", by_user_id=user.id))
+        if (plan.email_included or {}).get(sub.band, 0) > 0:
+            from ..models.credits import EmailLedger
+            db.add(EmailLedger(org_id=sub.org_id, delta=plan.email_included[sub.band], reason=f"Monthly allowance {body.period}", by_user_id=user.id))
         made, total = made + 1, total + amt
     audit(db, user_id=user.id, action="saas.invoices.run", entity="period", entity_id=body.period, meta={"created": made, "total": total})
     db.commit()
@@ -286,7 +289,7 @@ def void_invoice(invoice_id: int, user: User = Depends(require_saas(*MONEY)), db
 @router.get("/plans")
 def plans(db: Session = Depends(get_db)):
     return {"all_features": ALL_FEATURES, "plans": [
-        {"key": p.key, "name": p.name, "name_bn": p.name_bn, "monthly": p.monthly, "setup": p.setup, "sms_included": p.sms_included, "features": p.features,
+        {"key": p.key, "name": p.name, "name_bn": p.name_bn, "monthly": p.monthly, "setup": p.setup, "sms_included": p.sms_included, "email_included": p.email_included or {}, "features": p.features,
          "subscribers": db.scalar(select(func.count()).select_from(Subscription).where(Subscription.plan_key == p.key)) or 0}
         for p in db.scalars(select(Plan).order_by(Plan.sort))]}
 
@@ -295,6 +298,7 @@ class PlanIn(BaseModel):
     monthly: dict[str, int]
     setup: dict[str, int]
     sms_included: dict[str, int]
+    email_included: dict[str, int] | None = None
     features: list[str]
 
 
@@ -304,6 +308,8 @@ def update_plan(key: str, body: PlanIn, user: User = Depends(require_saas("SUPER
     if not p:
         raise HTTPException(404, "Not found")
     p.monthly, p.setup, p.sms_included = body.monthly, body.setup, body.sms_included
+    if body.email_included is not None:
+        p.email_included = body.email_included
     p.features = [f for f in body.features if f in ALL_FEATURES]
     audit(db, user_id=user.id, action="saas.plan.edit", entity="plan", entity_id=key)
     db.commit()

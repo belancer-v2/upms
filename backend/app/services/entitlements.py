@@ -24,6 +24,12 @@ def org_features(db: Session, org_id: int) -> set[str]:
     return feats
 
 
+def email_balance(db: Session, org_id: int) -> int:
+    from sqlalchemy import func
+    from ..models.credits import EmailLedger
+    return int(db.scalar(select(func.coalesce(func.sum(EmailLedger.delta), 0)).where(EmailLedger.org_id == org_id)) or 0)
+
+
 def sms_balance(db: Session, org_id: int) -> int:
     from sqlalchemy import func
     from ..models.saas import SmsLedger

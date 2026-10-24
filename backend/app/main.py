@@ -33,6 +33,13 @@ app.include_router(complaints_router.router)
 app.include_router(committee_router.router)
 app.include_router(gateway_router.router)
 app.include_router(profiles.router)
+from .routers import credits as credits_router  # noqa: E402
+app.include_router(credits_router.router)
+app.include_router(credits_router.console)
+from .routers import visitors as visitors_router  # noqa: E402
+app.include_router(visitors_router.router)
+from .routers import parking as parking_router  # noqa: E402
+app.include_router(parking_router.router)
 from .routers import amenities as amenities_router  # noqa: E402
 app.include_router(amenities_router.router)
 
@@ -40,3 +47,5 @@ app.include_router(amenities_router.router)
 @app.get("/api/health")
 def health():
     return {"ok": True, "app": "flatwise"}
+from .routers import agency as agency_router  # noqa: E402
+app.include_router(agency_router.router)

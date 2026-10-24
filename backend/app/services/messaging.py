@@ -4,7 +4,8 @@ from sqlalchemy.orm import Session
 from ..models.billing import Message
 from ..models.core import now
 from ..models.saas import SmsLedger
-from .entitlements import sms_balance
+from ..models.credits import EmailLedger
+from .entitlements import email_balance, sms_balance
 
 
 def deliver(db: Session, org_id: int, msg: Message) -> Message:
@@ -17,5 +18,13 @@ def deliver(db: Session, org_id: int, msg: Message) -> Message:
             msg.status, msg.error = "failed", "No SMS credit"
             return msg
         db.add(SmsLedger(org_id=org_id, delta=-1, reason=f"SMS {msg.template}"))
+    elif msg.channel == "email":
+        if not msg.to_email:
+            msg.status, msg.error = "failed", "No email address"
+            return msg
+        if email_balance(db, org_id) < 1:
+            msg.status, msg.error = "failed", "No email credit"
+            return msg
+        db.add(EmailLedger(org_id=org_id, delta=-1, reason=f"Email {msg.template}"[:60]))
     msg.status, msg.sent_at = "sent", now()
     return msg

@@ -85,10 +85,22 @@ class UnitIn(BaseModel):
     number: str = Field(min_length=1, max_length=16)
     area_sqft: float = Field(default=0, ge=0, le=20000)
     bedrooms: int = Field(default=3, ge=0, le=10)
+    cars_per_flat: int = Field(default=0, ge=0, le=5)    # parking given with the flat (M17)
+    bikes_per_flat: int = Field(default=0, ge=0, le=5)
 
 
 def _manage(ctx: Ctx):
     ctx.need(*MANAGE)
+
+
+def _parking(db: Session, ctx: Ctx, units: list, cars: int, bikes: int) -> None:
+    """Parking goes with the flat: create and allocate the slots in the same transaction (M17). Nothing happens when both are 0."""
+    if not (cars or bikes):
+        return
+    ctx.feature("parking")
+    from ..services.parking import provision_unit
+    n = sum(provision_unit(db, u, cars, bikes) for u in units)
+    audit(db, user_id=ctx.user.id, org_id=ctx.property.org_id, property_id=ctx.property.id, action="parking.provision", meta={"flats": len(units), "slots": n, "cars": cars, "bikes": bikes})
 
 
 @router.post("/units", status_code=201)
@@ -96,9 +108,10 @@ def add_unit(body: UnitIn, ctx: Ctx = Depends(property_ctx), db: Session = Depen
     _manage(ctx)
     if db.scalar(select(Unit.id).where(Unit.property_id == ctx.property.id, Unit.number == body.number)):
         raise HTTPException(409, "This unit number already exists")
-    u = Unit(property_id=ctx.property.id, **body.model_dump())
+    u = Unit(property_id=ctx.property.id, **body.model_dump(exclude={"cars_per_flat", "bikes_per_flat"}))
     db.add(u)
     db.flush()
+    _parking(db, ctx, [u], body.cars_per_flat, body.bikes_per_flat)
     audit(db, user_id=ctx.user.id, org_id=ctx.property.org_id, property_id=ctx.property.id, action="unit.add", entity="unit", entity_id=u.id, meta={"number": u.number})
     db.commit()
     return unit_dict(db, u, True)
@@ -110,6 +123,8 @@ class GenIn(BaseModel):
     per_block: int = Field(ge=1, le=12)
     area_sqft: float = 1200
     bedrooms: int = 3
+    cars_per_flat: int = Field(default=0, ge=0, le=5)
+    bikes_per_flat: int = Field(default=0, ge=0, le=5)
 
 
 @router.post("/units/generate", status_code=201)
@@ -117,14 +132,18 @@ def generate(body: GenIn, ctx: Ctx = Depends(property_ctx), db: Session = Depend
     """Creates A-101, A-102 ... for every block and floor. Skips numbers that already exist."""
     _manage(ctx)
     have = set(db.scalars(select(Unit.number).where(Unit.property_id == ctx.property.id)))
-    made = 0
+    made, new = 0, []
     for f in range(1, body.floors + 1):
         for b in body.blocks:
             for n in range(1, body.per_block + 1):
                 num = f"{b}-{f}{n:02d}"
                 if num not in have:
-                    db.add(Unit(property_id=ctx.property.id, block=b, floor=f, number=num, area_sqft=body.area_sqft, bedrooms=body.bedrooms))
+                    nu = Unit(property_id=ctx.property.id, block=b, floor=f, number=num, area_sqft=body.area_sqft, bedrooms=body.bedrooms)
+                    db.add(nu)
+                    new.append(nu)
                     made += 1
+    db.flush()
+    _parking(db, ctx, new, body.cars_per_flat, body.bikes_per_flat)
     ctx.property.floors = max(ctx.property.floors, body.floors)
     audit(db, user_id=ctx.user.id, org_id=ctx.property.org_id, property_id=ctx.property.id, action="unit.generate", meta={"created": made})
     db.commit()
@@ -139,6 +158,8 @@ class ImportRow(BaseModel):
     bedrooms: int = 3
     owner_name: str = ""
     owner_phone: str = ""
+    cars_per_flat: int = Field(default=0, ge=0, le=5)
+    bikes_per_flat: int = Field(default=0, ge=0, le=5)
 
 
 @router.post("/units/import")
@@ -156,6 +177,7 @@ def import_units(rows: list[ImportRow], ctx: Ctx = Depends(property_ctx), db: Se
             db.add(u)
             db.flush()
             created += 1
+        _parking(db, ctx, [u], r.cars_per_flat, r.bikes_per_flat)
         if r.owner_name and not db.scalar(select(Occupancy.id).where(Occupancy.unit_id == u.id, Occupancy.kind == "owner", Occupancy.active)):
             db.add(Occupancy(unit_id=u.id, kind="owner", name=r.owner_name, phone=r.owner_phone, resides=False, start_date=date.today()))
     audit(db, user_id=ctx.user.id, org_id=ctx.property.org_id, property_id=ctx.property.id, action="unit.import", meta={"created": created, "updated": updated})
@@ -213,6 +235,9 @@ def move_out(occ_id: int, ctx: Ctx = Depends(property_ctx), db: Session = Depend
     if not (ctx.has(*MANAGE) or (o.kind == "tenant" and ctx.has("FLAT_OWNER", "OWNER_REP") and _own_unit(ctx, u))):
         raise HTTPException(403, "Your role cannot do this")
     o.active, o.end_date = False, date.today()
+    if o.kind == "tenant":  # their vehicles go to "to review" (M17)
+        from ..services.parking import flag_tenant_vehicles
+        flag_tenant_vehicles(db, u, ctx.user.id, ctx.property.org_id)
     if o.user_id:  # the login stops working for this building
         for m in db.scalars(select(Membership).where(Membership.user_id == o.user_id, Membership.unit_id == u.id)):
             db.delete(m)

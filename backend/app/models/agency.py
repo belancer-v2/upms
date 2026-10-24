@@ -139,3 +139,14 @@ class AgencyBill(Base):
     expense_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
     created_by: Mapped[int] = mapped_column(Integer)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
+def posting_map(db, property_id: int) -> dict[int, dict]:
+    """staff id -> employer info, for staff who work for an agency. Direct staff are absent from the map."""
+    from sqlalchemy import select
+    ags = {a.id: a for a in db.scalars(select(Agency).where(Agency.property_id == property_id))}
+    out = {}
+    for l in db.scalars(select(StaffPosting).where(StaffPosting.agency_id.in_(list(ags) or [-1]))):
+        a = ags[l.agency_id]
+        out[l.staff_id] = {"agency_id": a.id, "name": a.name, "name_bn": a.name_bn, "emp_no": l.emp_no, "deployed_on": l.deployed_on.isoformat() if l.deployed_on else None, "substitute": l.substitute}
+    return out

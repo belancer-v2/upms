@@ -32,6 +32,7 @@ class Plan(Base):
     setup: Mapped[dict] = mapped_column(JSON, default=dict)        # one-time setup fee per band
     sms_included: Mapped[dict] = mapped_column(JSON, default=dict) # SMS per month per band
     features: Mapped[list] = mapped_column(JSON, default=list)    # feature flags switched on by this plan
+    email_included: Mapped[dict] = mapped_column(JSON, default=dict)  # email credits per month per band (M19)
 
 
 class Subscription(Base):
@@ -70,7 +71,7 @@ class SaasInvoice(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     number: Mapped[str] = mapped_column(String(24), unique=True)
     org_id: Mapped[int] = mapped_column(ForeignKey("organizations.id"), index=True)
-    kind: Mapped[str] = mapped_column(String(12), default="subscription")  # subscription | setup | sms
+    kind: Mapped[str] = mapped_column(String(12), default="subscription")  # subscription | setup | sms | credits
     period: Mapped[str] = mapped_column(String(8), default="")             # 2026-10, or 2026 for yearly
     description: Mapped[str] = mapped_column(String(200), default="")
     amount: Mapped[int] = mapped_column(Integer)                           # paisa
@@ -80,6 +81,9 @@ class SaasInvoice(Base):
     paid_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     method: Mapped[str] = mapped_column(String(16), default="")
     trx_id: Mapped[str] = mapped_column(String(40), default="")
+    items: Mapped[list] = mapped_column(JSON, default=list)               # M19 credit purchases: [{kind, name, name_bn, credits, amount}]
+    vat_bps: Mapped[int] = mapped_column(Integer, default=0)               # M19: VAT rate in basis points at the time of sale
+    vat_amount: Mapped[int] = mapped_column(Integer, default=0)            # M19: paisa, included in amount
 
 
 class SmsLedger(Base):
@@ -91,6 +95,7 @@ class SmsLedger(Base):
     reason: Mapped[str] = mapped_column(String(60), default="")
     at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
     by_user_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    invoice_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)   # M19: the invoice a purchased grant belongs to
 
 
 class LeadNote(Base):
