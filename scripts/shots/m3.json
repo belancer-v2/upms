@@ -1,0 +1,12 @@
+{ "module": "m3-property", "shots": [
+  { "name": "01-building-map-admin", "path": "/app/units", "as": "padmin", "full": true },
+  { "name": "02-flat-detail-owner-and-tenant", "path": "/app/units", "as": "padmin", "click": ["button[aria-label^='B-302']"] },
+  { "name": "03-flats-list-bangla", "path": "/app/units", "as": "padmin", "lang": "bn", "click": ["button:has-text('তালিকা')"] },
+  { "name": "04-add-flats-generate", "path": "/app/units", "as": "padmin", "click": ["button:has-text('Add flats')"] },
+  { "name": "05-people", "path": "/app/people", "as": "treasurer" },
+  { "name": "06-agency-portfolio", "path": "/app/portfolio", "as": "agency" },
+  { "name": "07-my-flat-owner", "path": "/app/my-flat", "as": "owner2" },
+  { "name": "08-owner-rep-approves-letting", "path": "/app/my-flat", "as": "ownerrep", "click": ["button:has-text('View')"] },
+  { "name": "09-building-map-caretaker-night", "path": "/app/units", "as": "caretaker", "theme": "dark", "full": true },
+  { "name": "10-building-map-mobile", "path": "/app/units", "as": "president", "w": 390, "h": 844, "full": true }
+] }

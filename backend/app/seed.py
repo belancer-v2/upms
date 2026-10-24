@@ -186,7 +186,94 @@ def seed_saas_demo(db, ctx):
             db.add(LeadNote(lead_id=l.id, user_id=sales.id, text=note))
 
 
-EXTRA_SEEDS: list = [seed_plans, seed_saas_demo]  # later modules append their seed functions here
+NAMES = [("Abdur Rahman", "আব্দুর রহমান"), ("Shamsul Haque", "শামসুল হক"), ("Nurul Islam", "নূরুল ইসলাম"), ("Fatema Begum", "ফাতেমা বেগম"), ("Kamrul Hasan", "কামরুল হাসান"),
+         ("Sultana Razia", "সুলতানা রাজিয়া"), ("Monir Hossain", "মনির হোসেন"), ("Rina Akter", "রিনা আক্তার"), ("Habib Ullah", "হাবিব উল্লাহ"), ("Shirin Sultana", "শিরীন সুলতানা"),
+         ("Anwar Hossain", "আনোয়ার হোসেন"), ("Mahfuza Khatun", "মাহফুজা খাতুন"), ("Jashim Uddin", "জসিম উদ্দিন"), ("Nasima Begum", "নাসিমা বেগম"), ("Rafiqul Alam", "রফিকুল আলম"),
+         ("Dilruba Yasmin", "দিলরুবা ইয়াসমিন"), ("Sohel Rana", "সোহেল রানা"), ("Mitu Rahman", "মিতু রহমান"), ("Faruk Ahmed", "ফারুক আহমেদ"), ("Lipi Akter", "লিপি আক্তার"),
+         ("Alamgir Kabir", "আলমগীর কবির"), ("Rehana Parvin", "রেহানা পারভীন"), ("Tarek Aziz", "তারেক আজিজ"), ("Sharmin Nahar", "শারমিন নাহার"), ("Mostafa Kamal", "মোস্তফা কামাল"),
+         ("Joynab Bibi", "জয়নব বিবি"), ("Zahid Hasan", "জাহিদ হাসান"), ("Parul Akter", "পারুল আক্তার"), ("Belal Hossain", "বেলাল হোসেন"), ("Suraiya Begum", "সুরাইয়া বেগম"),
+         ("Imtiaz Ahmed", "ইমতিয়াজ আহমেদ"), ("Ferdousi Islam", "ফেরদৌসী ইসলাম"), ("Golam Kibria", "গোলাম কিবরিয়া"), ("Hosne Ara", "হোসনে আরা"), ("Saiful Islam", "সাইফুল ইসলাম"),
+         ("Nazma Khanam", "নাজমা খানম"), ("Masud Rana", "মাসুদ রানা"), ("Jesmin Akter", "জেসমিন আক্তার"), ("Tofazzal Hossain", "তোফাজ্জল হোসেন"), ("Kohinur Begum", "কোহিনূর বেগম")]
+
+
+def seed_units(db, ctx):
+    from datetime import date, timedelta
+    from random import Random
+    from .models.property import Occupancy, Unit
+    rnd = Random(11)
+    areas = [1100, 1250, 1380, 1450, 1600, 1650]
+
+    def build(prop, floors, blocks, per_block, density):
+        units = []
+        for f in range(1, floors + 1):
+            for b in blocks:
+                for n in range(1, per_block + 1):
+                    u = Unit(property_id=prop.id, block=b, floor=f, number=f"{b}-{f}{n:02d}", area_sqft=rnd.choice(areas), bedrooms=3 if rnd.random() > .2 else 2)
+                    db.add(u)
+                    units.append(u)
+        db.flush()
+        for i, u in enumerate(units):
+            en, bn = NAMES[(i * 7 + prop.id) % len(NAMES)]
+            phone = f"0171{rnd.randint(1000000, 9999999)}"
+            start = date(2021, 1, 1) + timedelta(days=rnd.randint(0, 1400))
+            slot = i % 8
+            if slot in density["owner"]:
+                db.add(Occupancy(unit_id=u.id, kind="owner", name=en, name_bn=bn, phone=phone, resides=True, start_date=start))
+                u.status = "occupied"
+            elif slot in density["tenant"]:
+                db.add(Occupancy(unit_id=u.id, kind="owner", name=en, name_bn=bn, phone=phone, resides=False, start_date=start))
+                ten = NAMES[(i * 5 + 3) % len(NAMES)]
+                db.add(Occupancy(unit_id=u.id, kind="tenant", name=ten[0], name_bn=ten[1], phone=f"0181{rnd.randint(1000000, 9999999)}", start_date=date(2025, 1, 1) + timedelta(days=rnd.randint(0, 600))))
+                u.status = "occupied"
+            else:
+                db.add(Occupancy(unit_id=u.id, kind="owner", name=en, name_bn=bn, phone=phone, resides=False, start_date=start))
+                u.status = "vacant"
+        db.flush()
+        return units
+
+    sun = build(ctx["sunrise"], 8, ["A", "B"], 2, {"owner": {0, 1, 2, 3, 4}, "tenant": {5, 6}})
+    build(ctx["lake"], 10, ["A", "B"], 2, {"owner": {0, 1, 2, 3}, "tenant": {4, 5, 6}})
+    build(ctx["green"], 6, ["A", "B"], 2, {"owner": {0, 1, 2}, "tenant": {3, 4, 5}})
+    by = {u.number: u for u in sun}
+
+    def person(email):
+        return db.scalar(select(User).where(User.email == f"{email}@flatwise.demo"))
+
+    def set_owner(unit, user, resides):
+        for o in db.scalars(select(Occupancy).where(Occupancy.unit_id == unit.id, Occupancy.kind == "owner")):
+            db.delete(o)
+        db.add(Occupancy(unit_id=unit.id, kind="owner", user_id=user.id, name=user.name, name_bn=user.name_bn, phone=user.phone, email=user.email, resides=resides, start_date=date(2020, 3, 1)))
+
+    # demo people who can sign in, each tied to a unit
+    mahmud, rokeya, tasnim, rep = person("owner"), person("owner2"), person("tenant"), person("ownerrep")
+    a501, b302, a801 = by["A-501"], by["B-302"], by["A-801"]
+    set_owner(a501, mahmud, True); a501.status = "occupied"
+    for o in db.scalars(select(Occupancy).where(Occupancy.unit_id == a501.id, Occupancy.kind == "tenant")):
+        db.delete(o)
+    set_owner(by["B-302"], rokeya, False)
+    for o in db.scalars(select(Occupancy).where(Occupancy.unit_id == b302.id, Occupancy.kind == "tenant")):
+        db.delete(o)
+    db.add(Occupancy(unit_id=b302.id, kind="tenant", user_id=tasnim.id, name=tasnim.name, name_bn=tasnim.name_bn, phone=tasnim.phone, email=tasnim.email, start_date=date(2025, 7, 1)))
+    b302.status = "occupied"
+    for o in db.scalars(select(Occupancy).where(Occupancy.unit_id == a801.id, Occupancy.kind == "tenant")):
+        db.delete(o)
+    for o in db.scalars(select(Occupancy).where(Occupancy.unit_id == a801.id, Occupancy.kind == "owner")):
+        o.name, o.name_bn, o.resides = "Kabir Chowdhury (abroad)", "কবির চৌধুরী (প্রবাসে)", False
+    a801.status = "to_let_pending"
+    vacants = [u for u in sun if u.status == "vacant"]
+    for u in vacants[:2]:
+        u.status = "to_let"
+    for m in db.scalars(select(Membership).where(Membership.user_id == mahmud.id)):
+        m.unit_id = a501.id
+    for m in db.scalars(select(Membership).where(Membership.user_id == rokeya.id)):
+        m.unit_id = b302.id
+    for m in db.scalars(select(Membership).where(Membership.user_id == tasnim.id)):
+        m.unit_id = b302.id
+    for m in db.scalars(select(Membership).where(Membership.user_id == rep.id)):
+        m.unit_id = a801.id
+
+
+EXTRA_SEEDS: list = [seed_plans, seed_saas_demo, seed_units]  # later modules append their seed functions here
 
 if __name__ == "__main__":
     run()
