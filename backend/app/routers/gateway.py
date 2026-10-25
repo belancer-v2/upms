@@ -252,7 +252,7 @@ def _finish(db: Session, s: GatewaySession, res: dict, source: str) -> str:
     return "cancel" if res["status"] == "cancelled" else "fail" if res["status"] in ("failed",) else "error"
 
 
-@router.api_route("/return/{token}", methods=["GET", "POST"], dependencies=[Depends(rate_limit("pret", 60, 60))])
+@router.api_route("/return/{token}", methods=["GET", "POST"], operation_id="gateway_provider_return", dependencies=[Depends(rate_limit("pret", 60, 60))])
 async def provider_return(token: str, request: Request, db: Session = Depends(get_db)):
     """Where the customer's browser lands after a real provider (bKash GET, SSLCommerz POST). The redirect is NOT trusted:
     the adapter asks the provider server to server what happened, and only that answer can mark the invoice paid."""
