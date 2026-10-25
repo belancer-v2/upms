@@ -1,4 +1,7 @@
-"""Payment gateway providers. Only a SANDBOX implementation exists: no credentials, no network.
+"""Payment gateway providers. SandboxProvider (default, no network) plus real bKash and SSLCommerz adapters in gateway_bkash.py / gateway_sslcommerz.py,
+switched on by BKASH_MODE / SSLCOMMERZ_MODE. The real adapters are verified against mocks only: see docs/PAYMENTS_SETUP.md.
+
+Original note: the sandbox needs no credentials, no network.
 
 A real provider (bKash tokenized checkout, Nagad, SSLCommerz) replaces `SandboxProvider` behind the same two calls:
   create_checkout(invoice, amount) -> {session_id, redirect_url}
@@ -7,6 +10,7 @@ Callbacks are authenticated by an HMAC over (session, status, amount, trx_id) wi
 """
 import hashlib
 import hmac
+import os
 import secrets
 
 from sqlalchemy import select
@@ -32,17 +36,19 @@ def sign(session: str, status: str, amount: int, trx_id: str) -> str:
 
 
 class SandboxProvider:
+    live = False
+
     def __init__(self, key: str):
         self.key = key
 
-    def create_checkout(self, invoice: Invoice, amount: int) -> dict:
-        sid = secrets.token_urlsafe(24)
+    def create_checkout(self, invoice: Invoice, amount: int, *, token: str = "", user=None) -> dict:
+        sid = token or secrets.token_urlsafe(24)
         return {"session_id": sid, "redirect_url": f"/pay/sandbox/{sid}", "provider_ref": f"{self.key.upper()}-SBX-{sid[:8]}"}
 
     def verify(self, payload: dict) -> dict:
         """Checks the signature on a callback payload. ok is True only for a genuine success."""
         sid, status, trx, amt, sig = str(payload.get("session", "")), str(payload.get("status", "")), str(payload.get("trx_id", "")), payload.get("amount"), str(payload.get("sig", ""))
-        if not isinstance(amt, int) or isinstance(amt, bool) or not hmac.compare_digest(sig, sign(sid, status, amt, trx)):
+        if not config.SANDBOX_PAYMENTS or not isinstance(amt, int) or isinstance(amt, bool) or not hmac.compare_digest(sig.encode(), sign(sid, status, amt, trx).encode()):
             return {"ok": False, "valid": False, "trx_id": trx, "amount": 0}
         return {"ok": status == "success", "valid": True, "trx_id": trx, "amount": amt}
 
@@ -50,9 +56,25 @@ class SandboxProvider:
         return "SBX" + hashlib.sha256(f"{self.key}|{session}".encode()).hexdigest()[:10].upper()
 
 
-def provider(key: str) -> SandboxProvider:
+TRANSPORT = None   # tests set an httpx.MockTransport here; production leaves it None
+
+
+def _mode(var: str) -> str:
+    return os.getenv(var, "off").strip().lower()
+
+
+def provider(key: str, sandbox: bool = False):
+    """The adapter for a payment method. BKASH_MODE / SSLCOMMERZ_MODE = sandbox|live switch on the real adapters (off = built-in simulator).
+    sandbox=True always returns the simulator (used by SMS/email credit purchases, which have no real checkout yet)."""
     if key not in PROVIDERS:
         raise ValueError("Unknown provider")
+    if not sandbox:
+        if key == "bkash" and _mode("BKASH_MODE") in ("sandbox", "live"):
+            from .gateway_bkash import BkashProvider
+            return BkashProvider(transport=TRANSPORT)
+        if key in [k.strip() for k in os.getenv("SSLCOMMERZ_KEYS", "card").split(",")] and _mode("SSLCOMMERZ_MODE") in ("sandbox", "live"):
+            from .gateway_sslcommerz import SslCommerzProvider
+            return SslCommerzProvider(key, transport=TRANSPORT)
     return SandboxProvider(key)
 
 

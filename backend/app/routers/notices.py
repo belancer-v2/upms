@@ -8,6 +8,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from ..audit import audit
+from ..services.ratelimit import limit as rate_limit
 from ..db import get_db
 from ..deps import Ctx, property_ctx
 from ..models.billing import Message
@@ -49,11 +50,11 @@ def _recipients(db: Session, ctx: Ctx, aud: str) -> list[dict]:
     return out
 
 
-def _n(db: Session, n: Notice, ctx: Ctx, mine: Receipt | None, users: dict) -> dict:
+def _n(db: Session, n: Notice, ctx: Ctx, mine: Receipt | None, users: dict, receipts: list[Receipt] | None = None) -> dict:
     d = {"id": n.id, "title": n.title, "title_bn": n.title_bn, "body": n.body, "body_bn": n.body_bn, "audience": n.audience, "priority": n.priority, "pinned": n.pinned, "status": n.status,
          "at": n.created_at.isoformat(), "by": users.get(n.created_by, ""), "read": bool(mine and mine.read_at)}
     if ctx.has(*REACH):
-        rows = db.scalars(select(Receipt).where(Receipt.notice_id == n.id)).all()
+        rows = receipts if receipts is not None else db.scalars(select(Receipt).where(Receipt.notice_id == n.id)).all()
         d["reach"] = {"total": len(rows), "read": sum(1 for r in rows if r.read_at), "app": sum(1 for r in rows if r.read_via == "app"), "link": sum(1 for r in rows if r.read_via == "link"), "no_phone": sum(1 for r in rows if not r.phone and not r.read_at)}
     return d
 
@@ -61,13 +62,15 @@ def _n(db: Session, n: Notice, ctx: Ctx, mine: Receipt | None, users: dict) -> d
 @router.get("")
 def notices(ctx: Ctx = Depends(property_ctx), db: Session = Depends(get_db)):
     ctx.feature("notices")
-    users = {u.id: u.name for u in db.scalars(select(User))}
+    users = dict(db.execute(select(User.id, User.name)).all())
     mine = {r.notice_id: r for r in db.scalars(select(Receipt).where(Receipt.user_id == ctx.user.id))}
-    out = []
-    for n in db.scalars(select(Notice).where(Notice.property_id == ctx.property.id, Notice.status == "live").order_by(Notice.pinned.desc(), Notice.created_at.desc()).limit(100)):
-        if _in_audience(ctx, n.audience):
-            out.append(_n(db, n, ctx, mine.get(n.id), users))
-    return out
+    shown = [n for n in db.scalars(select(Notice).where(Notice.property_id == ctx.property.id, Notice.status == "live").order_by(Notice.pinned.desc(), Notice.created_at.desc()).limit(100))
+             if _in_audience(ctx, n.audience)]
+    by_notice: dict[int, list[Receipt]] = {n.id: [] for n in shown}
+    if shown and ctx.has(*REACH):   # one query for every notice's receipts instead of one per notice
+        for r in db.scalars(select(Receipt).where(Receipt.notice_id.in_(list(by_notice)))):
+            by_notice[r.notice_id].append(r)
+    return [_n(db, n, ctx, mine.get(n.id), users, by_notice.get(n.id, [])) for n in shown]
 
 
 class NoticeIn(BaseModel):
@@ -187,7 +190,7 @@ def archive(nid: int, ctx: Ctx = Depends(property_ctx), db: Session = Depends(ge
     return {"ok": True}
 
 
-@router.get("/link/{token}")
+@router.get("/link/{token}", dependencies=[Depends(rate_limit("link", 120, 600))])
 def by_link(token: str, db: Session = Depends(get_db)):
     """The page an SMS link opens. No sign-in. Opening it is the read proof."""
     r = db.scalar(select(Receipt).where(Receipt.token == token))
@@ -291,7 +294,7 @@ def accept(pid: int, ctx: Ctx = Depends(property_ctx), db: Session = Depends(get
 @pol.get("/{pid}/history")
 def history(pid: int, ctx: Ctx = Depends(property_ctx), db: Session = Depends(get_db)):
     p = _pol(db, ctx, pid)
-    users = {u.id: u.name for u in db.scalars(select(User))}
+    users = dict(db.execute(select(User.id, User.name)).all())
     out = []
     for v in db.scalars(select(PolicyVersion).where(PolicyVersion.policy_id == p.id).order_by(PolicyVersion.version.desc())):
         acc = db.scalars(select(PolicyAcceptance).where(PolicyAcceptance.version_id == v.id).order_by(PolicyAcceptance.at)).all()

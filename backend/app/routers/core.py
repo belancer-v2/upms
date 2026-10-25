@@ -26,7 +26,7 @@ def audit_list(limit: int = 50, user: User = Depends(current_user), db: Session 
             q = q.where(or_(AuditLog.property_id == prop.id, AuditLog.user_id == user.id))
         else:
             q = q.where(AuditLog.user_id == user.id)
-    names = {u.id: u.name for u in db.scalars(select(User))}
+    names = dict(db.execute(select(User.id, User.name)).all())
     return [{"id": a.id, "at": a.at.isoformat(), "who": names.get(a.user_id, "system"), "action": a.action,
              "entity": a.entity, "entity_id": a.entity_id} for a in db.scalars(q)]
 

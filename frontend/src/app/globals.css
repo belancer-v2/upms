@@ -2,7 +2,7 @@
 :root {
   --bg: #F7F3F3; --surface: #FFFFFF; --surface2: #FBF8F8; --text: #2A1520; --muted: #6D6E70; --line: #ECE6E6;
   --brand: #691542; --primary: #9D1E5F; --primary-hover: #84184F; --on-primary: #FFFFFF; --blush: #F4DDE8; --blush-text: #691542;
-  --ok: #007C75; --ok-bg: #E4F3F1; --warn: #8A5C00; --warn-bg: #FFF3D6; --bad: #971B1E; --bad-bg: #FBE4E2; --info: #1072BA; --info-bg: #E3EFF8;
+  --ok: #00746D; --ok-bg: #E4F3F1; --warn: #8A5C00; --warn-bg: #FFF3D6; --bad: #971B1E; --bad-bg: #FBE4E2; --info: #0E69AE; --info-bg: #E3EFF8;
   --spark: linear-gradient(135deg, #EC2227, #9D1E5F);
   --hero: linear-gradient(135deg, #8A1D58 0%, #691542 55%, #3A0B24 100%);
   --radius: 18px; --radius-sm: 12px;
@@ -173,3 +173,34 @@ body { overflow-x: hidden; }
   .content { padding: 0 !important; } .shell { display: block !important; } .main { margin: 0 !important; padding: 0 !important; }
   body { background: #fff !important; } .card { box-shadow: none !important; border: 1px solid #ccc !important; break-inside: avoid; }
 }
+
+/* ---- P4: accessibility and touch ---- */
+:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+[data-theme="dark"] :focus-visible { outline-color: #F1B8D3; }
+.input:focus-visible, .btn:focus-visible, .tab:focus-visible { outline-offset: 1px; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+  .btn:active { transform: none; }
+}
+@media (max-width: 960px), (pointer: coarse) {
+  .btn, .btn-sm, .tab, .seg button, .nav a { min-height: 44px; }
+  .icon-btn { width: 44px; height: 44px; }
+  .seg button { min-width: 44px; padding-inline: 14px; }
+  .input, select.input { min-height: 44px; }
+  label.row:has(> input[type=checkbox]), label.row:has(> input[type=radio]) { min-height: 44px; align-items: center; }
+  input[type=checkbox], input[type=radio] { width: 22px; height: 22px; }
+  table.t tr[tabindex]:focus-visible { outline-offset: -2px; }
+}
+@media (max-width: 960px), (pointer: coarse) {
+  .help-q, h1 .help-q { width: 44px; height: 44px; margin-block: -8px; }
+}
+/* P4: big numbers such as "BDT 384,000" stay on one line inside four-across stat cards */
+.stat .v { font-size: clamp(22px, 1.4vw + 6px, 30px); white-space: nowrap; }
+@media (max-width: 1100px) { .stat .v { font-size: 28px; } }
+/* P4: on a phone the top bar scrolls away instead of covering a fifth of the screen, and drops the user's name (the avatar stays) */
+@media (max-width: 720px) { .topbar { position: static; gap: 8px; } .topbar div.small { display: none; } }
+.building-switch { width: 230px; min-height: 40px; padding: 6px 12px; max-width: 100%; }
+@media (max-width: 960px), (pointer: coarse) { .building-switch { min-height: 44px; } }
+@media (max-width: 720px) { .topbar select.input, .topbar .row > select.input { max-width: calc(100vw - 150px); } }
+@media (max-width: 960px), (pointer: coarse) { .btn, .tab { min-width: 44px; } .icon-btn { flex: none; min-width: 44px; } }
+@media (max-width: 960px), (pointer: coarse) { select.input { min-height: 44px !important; } }

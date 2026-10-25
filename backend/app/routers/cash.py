@@ -1,5 +1,6 @@
 """Cash collection. A caretaker takes cash, the payer confirms (code by SMS or a tap in the app), the cash counts as custody until the treasurer accepts the hand-over."""
 import hashlib
+import hmac
 import secrets
 from datetime import date, timedelta
 
@@ -53,7 +54,7 @@ def _entry(db: Session, e: CashEntry, units: dict, users: dict) -> dict:
 
 def _maps(db: Session, ctx: Ctx):
     units = {u.id: u.number for u in db.scalars(select(Unit).where(Unit.property_id == ctx.property.id))}
-    users = {u.id: u.name for u in db.scalars(select(User))}
+    users = dict(db.execute(select(User.id, User.name)).all())
     return units, users
 
 
@@ -135,7 +136,7 @@ def enter_code(eid: int, body: CodeIn, ctx: Ctx = Depends(property_ctx), db: Ses
         raise HTTPException(423, "Too many wrong codes. Try again after one hour or ask the payer to confirm in the app.")
     if not e.code_expires or _aware(e.code_expires) < now():
         raise HTTPException(410, "The code has expired. Send a new one.")
-    if _hash(e.id, body.code) != e.code_hash:
+    if not hmac.compare_digest(_hash(e.id, body.code), e.code_hash or ""):
         e.attempts += 1
         if e.attempts >= MAX_TRIES:
             e.locked_until = now() + timedelta(minutes=LOCK_MINUTES)
@@ -217,7 +218,7 @@ def entries(ctx: Ctx = Depends(property_ctx), db: Session = Depends(get_db)):
 def custody(ctx: Ctx = Depends(property_ctx), db: Session = Depends(get_db)):
     _gate(ctx)
     ctx.need(*(MONEY_VIEW | {"CARETAKER"}))
-    users = {u.id: u.name for u in db.scalars(select(User))}
+    users = dict(db.execute(select(User.id, User.name)).all())
     rows = []
     for cid in sorted(set(db.scalars(select(CashEntry.collector_id).where(CashEntry.property_id == ctx.property.id)))):
         if not ctx.has(*MONEY_VIEW) and cid != ctx.user.id:
@@ -255,7 +256,7 @@ def _rem(r: Remittance, users: dict, n: int = 0) -> dict:
 def remittances(ctx: Ctx = Depends(property_ctx), db: Session = Depends(get_db)):
     _gate(ctx)
     ctx.need(*(MONEY_VIEW | {"CARETAKER"}))
-    users = {u.id: u.name for u in db.scalars(select(User))}
+    users = dict(db.execute(select(User.id, User.name)).all())
     stmt = select(Remittance).where(Remittance.property_id == ctx.property.id).order_by(Remittance.id.desc()).limit(100)
     if not ctx.has(*MONEY_VIEW):
         stmt = stmt.where(Remittance.collector_id == ctx.user.id)

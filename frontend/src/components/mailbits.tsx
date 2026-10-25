@@ -14,9 +14,10 @@ export function StatusChip({ s }: { s: string }) {
 
 /** A rendered email in a sandboxed iframe. No scripts run, so the preview cannot touch the app. */
 export function EmailFrame({ html, mobile, height = 560 }: { html: string; mobile?: boolean; height?: number }) {
+  const { t } = useT();
   return (
     <div style={{ display: "flex", justifyContent: "center", background: "var(--surface2)", border: "1.5px solid var(--line)", borderRadius: 14, padding: 10, overflow: "auto" }}>
-      <iframe title="email" sandbox="" srcDoc={html} style={{ width: mobile ? 375 : "100%", maxWidth: "100%", height, border: 0, background: "transparent", borderRadius: 8 }} />
+      <iframe title={t("a11y.email_preview")} sandbox="" srcDoc={html} style={{ width: mobile ? 375 : "100%", maxWidth: "100%", height, border: 0, background: "transparent", borderRadius: 8 }} />
     </div>
   );
 }

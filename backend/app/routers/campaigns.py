@@ -9,6 +9,7 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from ..audit import audit
+from ..services.ratelimit import limit as rate_limit
 from ..db import get_db
 from ..deps import require_saas
 from ..models.core import User, now
@@ -525,7 +526,7 @@ def lead_consent(lead_id: int, body: ConsentIn, user: User = Depends(editor), db
 
 
 # ------------------------------------------------------------------ public: no sign-in
-@public_router.get("/unsubscribe/{token}")
+@public_router.get("/unsubscribe/{token}", dependencies=[Depends(rate_limit("unsub", 40, 600))])
 def unsubscribe_info(token: str, db: Session = Depends(get_db)):
     """Shows who the link is for without changing anything (mail scanners open links). POST confirms."""
     data = M.unsign(token, "unsub")
@@ -534,7 +535,7 @@ def unsubscribe_info(token: str, db: Session = Depends(get_db)):
     return {"email": M.mask(data["e"]), "already": M.suppression_for(db, data["e"]) is not None}
 
 
-@public_router.post("/unsubscribe/{token}")
+@public_router.post("/unsubscribe/{token}", dependencies=[Depends(rate_limit("unsub", 40, 600))])
 def unsubscribe_do(token: str, db: Session = Depends(get_db)):
     res = M.unsubscribe(db, token)
     if not res:
@@ -548,7 +549,7 @@ def unsubscribe_do(token: str, db: Session = Depends(get_db)):
 PIXEL = bytes.fromhex("47494638396101000100800000000000ffffff21f90401000000002c00000000010001000002024401003b")
 
 
-@public_router.get("/mail/open/{token}.gif")
+@public_router.get("/mail/open/{token}.gif", dependencies=[Depends(rate_limit("mailpx", 600, 600))])
 def mail_open(token: str, db: Session = Depends(get_db)):
     data = M.unsign(token, "open")
     row = db.get(MailOutbox, data["o"]) if data else None
@@ -558,7 +559,7 @@ def mail_open(token: str, db: Session = Depends(get_db)):
     return Response(PIXEL, media_type="image/gif", headers={"Cache-Control": "no-store"})
 
 
-@public_router.get("/mail/click/{token}")
+@public_router.get("/mail/click/{token}", dependencies=[Depends(rate_limit("mailclick", 200, 600))])
 def mail_click(token: str, db: Session = Depends(get_db)):
     data = M.unsign(token, "click")
     url = M.safe_url(data.get("u", "")) if data else ""

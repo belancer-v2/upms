@@ -24,7 +24,7 @@ export default function Onboarding() {
   const n = (s: string) => rows.filter((r) => r.status === s).length;
   const show = async (c: C) => setOpen(await api<C>(`/onboarding/cases/${c.id}`));
   return (<>
-    <PageHead title={t("ob.title")} sub={t("ob.sub")} actions={can && <Btn onClick={() => setForm(true)}>{t("ob.new")}</Btn>} />
+    <PageHead helpKey="tenant-onboarding" title={t("ob.title")} sub={t("ob.sub")} actions={can && <Btn onClick={() => setForm(true)}>{t("ob.new")}</Btn>} />
     <div className="grid g4" style={{ marginBottom: 16 }}>{(["invited", "review", "verified", "police"] as const).map((s) => <Stat key={s} label={t(`ob.st.${s}`)} value={n(s)} />)}</div>
     <DataTable rows={rows} pageSize={10} search={(r) => `${r.name} ${r.unit}`} cols={[
       { key: "u", head: t("ob.f.unit"), render: (r) => <b>{r.unit}</b> }, { key: "n", head: t("common.name"), render: (r) => <>{r.name}<br /><span className="small muted">{r.phone}</span></> },

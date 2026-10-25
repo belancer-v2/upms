@@ -38,6 +38,24 @@ modules.push(agencyDict as unknown as { en: D; bn: D });
 
 modules.push(visitorsDict as unknown as { en: D; bn: D });
 
+import { p4Dict } from "./i18n/p4";
+modules.push(p4Dict as unknown as { en: D; bn: D });
+import { actDict } from "./i18n/act";
+modules.push(actDict as unknown as { en: D; bn: D });
+
+import { jobsDict } from "./i18n/jobs";
+modules.push(jobsDict as unknown as { en: D; bn: D });
+
+// P5: help center, setup wizard, data export and retention, public site pages
+import { helpDict } from "./i18n/help";
+import { setupDict } from "./i18n/setup";
+import { datatoolsDict } from "./i18n/datatools";
+import { site2Dict } from "./i18n/site2";
+modules.push(helpDict as unknown as { en: D; bn: D }, setupDict as unknown as { en: D; bn: D }, datatoolsDict as unknown as { en: D; bn: D }, site2Dict as unknown as { en: D; bn: D });
+
+import { authxDict } from "./i18n/authx";
+modules.push(authxDict as unknown as { en: D; bn: D });
+
 export const dict: { en: D; bn: D } = {
   en: Object.assign({}, ...modules.map((m) => m.en)),
   bn: Object.assign({}, ...modules.map((m) => m.bn)),

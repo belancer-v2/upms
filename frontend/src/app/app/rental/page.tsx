@@ -42,10 +42,10 @@ export default function Rental() {
   const setSwitch = async (on: boolean) => { if (!on && !confirm(t("rent.turn_off_confirm"))) return; try { await api(`/rental/units/${uid}/switch`, { method: "PUT", body: { enabled: on } }); toast.show(t("rent.switched")); await loadFlats(); } catch (e: any) { toast.show(e.message); } };
 
   if (!flats) return <p className="muted">{t("common.loading")}</p>;
-  if (!flats.length) return (<><PageHead title={t("rent.title")} sub={t("rent.sub")} /><Card><p className="muted">{err || t("rent.off_tenant")}</p></Card></>);
+  if (!flats.length) return (<><PageHead helpKey="rental-records" title={t("rent.title")} sub={t("rent.sub")} /><Card><p className="muted">{err || t("rent.off_tenant")}</p></Card></>);
   const owner = flat?.side === "owner";
   return (<>
-    <PageHead title={t("rent.title")} sub={t("rent.sub")} />
+    <PageHead helpKey="rental-records" title={t("rent.title")} sub={t("rent.sub")} />
     {flats.length > 1 && <div style={{ marginBottom: 14 }}><Field label={t("rent.flat")}><select className="input" value={uid} onChange={(e) => { setUid(Number(e.target.value)); setD(null); }}>{flats.map((f) => <option key={f.unit_id} value={f.unit_id}>{f.number}</option>)}</select></Field></div>}
     <p className="small muted" style={{ marginBottom: 14 }}>🔒 {t("rent.private")}</p>
     {owner && <Card style={{ marginBottom: 16 }}><div className="row between wrap"><div><h3 style={{ margin: 0 }}>{t("rent.switch")} · {flat!.number}</h3><p className="small muted" style={{ margin: "4px 0 0" }}>{t("rent.switch_hint")}</p></div>

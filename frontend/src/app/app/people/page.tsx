@@ -1,4 +1,5 @@
 "use client";
+import { ExportButton } from "@/components/ExportButton";
 import { useEffect, useState } from "react";
 import { Btn, Chip, DataTable, PageHead, Tabs } from "@/components/ui";
 import { Avatar } from "@/components/Avatar";
@@ -13,7 +14,7 @@ export default function People() {
   useEffect(() => { api<P[]>("/people").then(setRows); }, [prop?.id]);
   const view = k ? rows.filter((r) => r.kind === k) : rows;
   return (<>
-    <PageHead title={t("people.title")} sub={t("people.sub")} />
+    <PageHead helpKey="add-people" title={t("people.title")} sub={t("people.sub")} actions={<ExportButton name="people" />} />
     <div style={{ marginBottom: 16 }}><Tabs value={k} onChange={setK} items={[{ id: "", label: `${t("people.all")} · ${rows.length}` }, { id: "owner", label: `${t("unit.owners")} · ${rows.filter((r) => r.kind === "owner").length}` }, { id: "tenant", label: `${t("unit.tenants")} · ${rows.filter((r) => r.kind === "tenant").length}` }]} /></div>
     <DataTable rows={view} pageSize={12} search={(r) => `${r.name} ${r.unit} ${r.phone}`} cols={[
       { key: "name", head: t("common.name"), render: (r) => <span className="row" style={{ gap: 10 }}><Avatar kind="occupant" id={r.id} name={pick(r.name, r.name_bn)} size={34} /><b>{pick(r.name, r.name_bn)}</b></span> }, { key: "unit", head: t("people.flat") },

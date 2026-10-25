@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Bar, Btn, Card, Chip, DataTable, Empty, Field, Modal, PageHead, Stat, useToast } from "@/components/ui";
 import { api, ftime, money } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { periodLabel } from "@/lib/act";
 import { useT } from "@/lib/i18n";
 
 type Entry = { id: number; unit: string; amount: number; status: string; mode: string; collector: string; at: string; locked: boolean; expired: boolean; tries_left: number };
@@ -29,7 +30,7 @@ export default function Cash() {
   const act = async (path: string, ok?: string) => { try { await api(path, { method: "POST" }); if (ok) toast.show(ok); load(); } catch (e: any) { toast.show(e.message); } };
 
   return (<>
-    <PageHead title={t("cash.title")} sub={t("cash.sub")} actions={collector && mine && mine.held > 0 ? <Btn onClick={() => act("/cash/remittances", t("cash.hand_done"))}>{t("cash.hand")}</Btn> : undefined} />
+    <PageHead helpKey="cash-desk" title={t("cash.title")} sub={t("cash.sub")} actions={collector && mine && mine.held > 0 ? <Btn onClick={() => act("/cash/remittances", t("cash.hand_done"))}>{t("cash.hand")}</Btn> : undefined} />
     <div className="grid g3" style={{ marginBottom: 16 }}>{cust.rows.length === 0 && <Card><Empty /></Card>}
       {cust.rows.map((r) => (<Card key={r.collector_id}><div className="row between"><h3 style={{ margin: 0 }}>{r.name}</h3><span className="small muted">{t("cash.limit", { a: money(r.limit) })}</span></div>
         <div style={{ fontSize: 28, fontWeight: 800, margin: "8px 0" }}>{money(r.held + r.pending)}</div><Bar pct={((r.held + r.pending) / r.limit) * 100} spark />
@@ -37,7 +38,7 @@ export default function Cash() {
 
     {collector && (<Card style={{ marginBottom: 16 }}><h3>{t("cash.collect")}</h3>
       <div className="grid g3" style={{ marginTop: 10, alignItems: "end" }}>
-        <Field label={t("cash.flat")}><select className="input" value={inv} onChange={(e) => pick(e.target.value)}><option value="">{t("cash.pick")}</option>{open.map((o) => <option key={o.id} value={o.id}>{o.unit} · {o.period} · {money(o.balance)}</option>)}</select></Field>
+        <Field label={t("cash.flat")}><select className="input" value={inv} onChange={(e) => pick(e.target.value)}><option value="">{t("cash.pick")}</option>{open.map((o) => <option key={o.id} value={o.id}>{o.unit} · {periodLabel(t, o.period)} · {money(o.balance)}</option>)}</select></Field>
         <Field label={t("cash.amount")}><input className="input" inputMode="decimal" value={amt} onChange={(e) => setAmt(e.target.value)} /></Field>
         <div style={{ marginBottom: 14 }}><Btn onClick={take} disabled={!inv || !(+amt > 0)}>{otp ? t("cash.take") : t("cash.take_link")}</Btn></div></div>
       {!otp && <p className="hint">{t("cash.link_note")}</p>}{demo && <p className="hint"><Chip tone="info">{t("cash.demo_code", { c: demo })}</Chip></p>}{err && <p className="error" role="alert">{err}</p>}</Card>)}

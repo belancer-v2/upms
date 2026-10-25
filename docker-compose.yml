@@ -1,0 +1,70 @@
+# Optional self-hosting (VPS). The primary target is cPanel: docs/CPANEL_DEPLOY.md.
+#   cp deploy/.env.example .env && edit it     (secrets: see backend/.env.example)
+#   docker compose up -d --build
+#   docker compose run --rm api python -m app.bootstrap     # migrations + reference data + first SUPER_ADMIN
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: flatwise
+      POSTGRES_USER: flatwise
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+    volumes: [dbdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U flatwise -d flatwise"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+  api:
+    build: ./backend
+    restart: unless-stopped
+    depends_on: {db: {condition: service_healthy}}
+    environment:
+      ENV: production
+      DATABASE_URL: postgresql://flatwise:${POSTGRES_PASSWORD}@db:5432/flatwise
+      SECRET_KEY: ${SECRET_KEY:?}
+      NID_KEY: ${NID_KEY:?}
+      APP_URL: ${APP_URL:?}
+      DEMO: "0"
+      UPLOAD_DIR: /data/uploads
+      WEB_CONCURRENCY: ${WEB_CONCURRENCY:-2}
+      BOOTSTRAP_ADMIN_EMAIL: ${BOOTSTRAP_ADMIN_EMAIL:-}
+      BOOTSTRAP_ADMIN_NAME: ${BOOTSTRAP_ADMIN_NAME:-}
+      BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-}
+      TRUSTED_PROXIES: ${TRUSTED_PROXIES:-}
+    volumes: [uploads:/data/uploads]
+  jobs:
+    build: ./backend
+    restart: unless-stopped
+    depends_on: {db: {condition: service_healthy}}
+    environment:
+      ENV: production
+      DATABASE_URL: postgresql://flatwise:${POSTGRES_PASSWORD}@db:5432/flatwise
+      SECRET_KEY: ${SECRET_KEY:?}
+      NID_KEY: ${NID_KEY:?}
+      APP_URL: ${APP_URL:?}
+      DEMO: "0"
+      UPLOAD_DIR: /data/uploads
+    volumes: [uploads:/data/uploads]
+    # the scheduler: run every due job once a minute (same command as the cPanel cron line)
+    entrypoint: ["/bin/sh", "-c", "while true; do python -m app.jobs.cli run-due; sleep 60; done"]
+    healthcheck: {disable: true}
+  web:
+    build:
+      context: ./frontend
+      args: {API_ORIGIN: "http://api:8000"}
+    restart: unless-stopped
+    depends_on: [api]
+  proxy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on: [web, api]
+    ports: ["80:80", "443:443"]
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:-localhost}      # your domain: Caddy gets and renews the TLS certificate itself
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+volumes: {dbdata: {}, uploads: {}, caddy_data: {}, caddy_config: {}}

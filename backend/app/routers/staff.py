@@ -123,7 +123,10 @@ def reveal(sid: int, ctx: Ctx = Depends(property_ctx), db: Session = Depends(get
 def nid_views(sid: int, ctx: Ctx = Depends(property_ctx), db: Session = Depends(get_db)):
     _gate(ctx)
     ctx.need(*(REVEAL | {"AUDITOR"}))
-    users = {u.id: u.name for u in db.scalars(select(User))}
+    st = db.get(Staff, sid)
+    if not st or st.property_id != ctx.property.id:      # an id from another building is "not found", never an empty list
+        raise HTTPException(404, "Not found")
+    users = dict(db.execute(select(User.id, User.name)).all())
     return [{"viewer": users.get(v.viewer_id, ""), "at": v.at.isoformat()} for v in db.scalars(select(NidView).where(NidView.staff_id == sid, NidView.property_id == ctx.property.id).order_by(NidView.id.desc()).limit(50))]
 
 
@@ -137,7 +140,7 @@ def _line(l: SalaryLine, st: dict) -> dict:
 def _sheet(db: Session, sh: SalarySheet, ctx: Ctx, lines: bool = True) -> dict:
     st = {s.id: s for s in db.scalars(select(Staff).where(Staff.property_id == ctx.property.id))}
     ls = db.scalars(select(SalaryLine).where(SalaryLine.sheet_id == sh.id).order_by(SalaryLine.id)).all()
-    users = {u.id: u.name for u in db.scalars(select(User))}
+    users = dict(db.execute(select(User.id, User.name)).all())
     d = {"id": sh.id, "period": sh.period, "status": sh.status, "total": sum(l.base + l.bonus - l.deduction for l in ls), "people": len(ls), "created_by": users.get(sh.created_by, ""), "created_by_id": sh.created_by,
          "approved_by": users.get(sh.approved_by, "") if sh.approved_by else "", "paid_on": sh.paid_on.isoformat() if sh.paid_on else None, "method": sh.method}
     if lines:

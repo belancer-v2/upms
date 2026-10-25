@@ -51,7 +51,7 @@ def balances(db: Session, property_id: int, start: date | None = None, end: date
     """Per account: debit total, credit total. Optional date range."""
     stmt = (select(Account.code, Account.name, Account.name_bn, Account.type, func.coalesce(func.sum(JournalLine.debit), 0), func.coalesce(func.sum(JournalLine.credit), 0))
             .select_from(Account).outerjoin(JournalLine, JournalLine.account_id == Account.id).outerjoin(Journal, Journal.id == JournalLine.journal_id)
-            .where(Account.property_id == property_id).group_by(Account.id))
+            .where(Account.property_id == property_id).group_by(Account.id, Account.code, Account.name, Account.name_bn, Account.type))
     if start:
         stmt = stmt.where((Journal.id.is_(None)) | (Journal.date >= start))
     if end:

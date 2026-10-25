@@ -13,6 +13,7 @@ from sqlalchemy import func, or_, select, update
 from sqlalchemy.orm import Session
 
 from ..audit import audit
+from ..services.ratelimit import limit as rate_limit
 from ..db import get_db
 from ..deps import Ctx, current_user, property_ctx, require_saas
 from ..models.core import Membership, Organization, User, now
@@ -124,7 +125,7 @@ def _new_purchase(db: Session, ctx: Ctx, pack: CreditPack, mode: str, method: st
                        credits=pack.credits, price=pack.price, vat_bps=bps, vat=vat, total=pack.price + vat, mode=mode, method=method, idem_key=f"cr:{token}",
                        status="created" if mode == "gateway" else "pending")
     if mode == "gateway":
-        p.provider_ref = gw.provider(method).create_checkout(None, p.total)["provider_ref"] if method in gw.PROVIDERS else ""   # type: ignore[arg-type]
+        p.provider_ref = gw.provider(method, sandbox=True).create_checkout(None, p.total)["provider_ref"] if method in gw.PROVIDERS else ""   # type: ignore[arg-type]
         p.expires_at = now() + timedelta(minutes=gw.SESSION_MINUTES)
     db.add(p)
     db.flush()
@@ -234,8 +235,11 @@ def _mine(db: Session, token: str, user: User) -> CreditPurchase:
 @router.get("/sandbox/{token}")
 def sandbox(token: str, user: User = Depends(current_user), db: Session = Depends(get_db)):
     """The practice 'provider' page asks for its details and gets the signed payloads a real provider would post to the callback."""
+    from .. import config as _cfg
+    if not _cfg.SANDBOX_PAYMENTS:      # the practice provider hands the payer a signed "success": it must not exist in production
+        raise HTTPException(404, "Not found")
     p = _mine(db, token, user)
-    trx = gw.provider(p.method).sandbox_trx(p.token)
+    trx = gw.provider(p.method, sandbox=True).sandbox_trx(p.token)
     payload = lambda st: {"session": p.token, "status": st, "trx_id": trx if st == "success" else "", "amount": p.total, "sig": gw.sign(p.token, st, p.total, trx if st == "success" else "")}  # noqa: E731
     return {**_purchase_out(db, p), "pay": payload("success"), "fail": payload("failed")}
 
@@ -247,13 +251,13 @@ class CallbackIn(BaseModel):
     sig: str
 
 
-@router.post("/callback/{token}")
+@router.post("/callback/{token}", dependencies=[Depends(rate_limit("callback", 60, 60))])
 def callback(token: str, body: CallbackIn, db: Session = Depends(get_db)):
     """Called by the provider (in the sandbox: by the hosted page). No sign-in; the signed payload is the proof. One credit grant per session."""
     p = db.scalar(select(CreditPurchase).where(CreditPurchase.token == token, CreditPurchase.mode == "gateway"))
     if not p:
         raise HTTPException(404, "Not found")
-    res = gw.provider(p.method).verify({"session": token, **body.model_dump()})
+    res = gw.provider(p.method, sandbox=True).verify({"session": token, **body.model_dump()})
     if not res["valid"]:
         raise HTTPException(403, "Bad signature")
     if p.status == "paid":
@@ -416,7 +420,7 @@ def sales(page: int = Query(1, ge=1), size: int = Query(10, ge=1, le=100), q: st
         like = f"%{q.strip()}%"
         stmt = stmt.where(or_(Organization.name.ilike(like), CreditPurchase.trx_id.ilike(like), CreditPurchase.pack_name.ilike(like)))
     total, rows = _paged(db, stmt, page, size)
-    paid = db.scalar(select(func.coalesce(func.sum(CreditPurchase.total), 0)).where(CreditPurchase.status == "paid")) or 0
+    paid = int(db.scalar(select(func.coalesce(func.sum(CreditPurchase.total), 0)).where(CreditPurchase.status == "paid")) or 0)
     return {"total": total, "page": page, "size": size, "paid_total": int(paid), "rows": [_purchase_out(db, p, org=True) for p in rows]}
 
 

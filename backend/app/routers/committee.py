@@ -208,7 +208,7 @@ def _result(approve: int, reject: int) -> str:
 
 
 def _p(db: Session, p: Proposal, ctx: Ctx, users: dict | None = None) -> dict:
-    users = users or {u.id: u.name for u in db.scalars(select(User))}
+    users = users or dict(db.execute(select(User.id, User.name)).all())
     votes = db.scalars(select(ProposalVote).where(ProposalVote.proposal_id == p.id)).all()
     mine = next((v.choice for v in votes if v.user_id == ctx.user.id), None)
     eligible = len(_voters(db, ctx))
@@ -236,7 +236,7 @@ def proposals(status: str = "", q: str = "", page: int = Query(1, ge=1), size: i
     if q.strip():
         stmt = stmt.where(Proposal.title.ilike(f"%{q.strip()}%"))
     total, rows = _page(stmt, db, page, size, (Proposal.status.desc(), Proposal.created_at.desc(), Proposal.id.desc()))   # "open" sorts before "closed" when descending
-    users = {u.id: u.name for u in db.scalars(select(User))}
+    users = dict(db.execute(select(User.id, User.name)).all())
     return {"items": [_p(db, p, ctx, users) for p in rows], "total": total, "page": page, "size": size}
 
 

@@ -1,0 +1,31 @@
+import { art, COM, CUSTOMER_ROLES, MGR } from "./types";
+
+export const COMMS = [
+  art("notices-read-proof", "comms", CUSTOMER_ROLES, 1,
+    { route: "/app/notices", feature: "notices", shots: [["notices", "Notices with how many have read", "কতজন পড়েছেন তাসহ নোটিশ"], ["not-read", "Who has not read", "কে পড়েননি"]], related: ["policies-acceptance", "sms-email-credits"], keywords: "notice announcement read proof sms link audience urgent pin archive নোটিশ ঘোষণা পড়া প্রমাণ" },
+    { t: "Notices and read proof", s: "Publish a notice once and see exactly who has read it and who has not.",
+      steps: ["Admin, president or secretary: open Notices and press New notice.", "Write the title and message in English and in Bangla using the two tabs. Residents who use Bangla see the Bangla version; if it is empty they see English.", "Choose who it is for (everyone, owners, tenants, committee), the priority, and whether to pin it. Tick Also send an SMS with a link to reach people outside the app.", "Open the notice to see X of Y have read it, how they read it (app or SMS link) and the list of people who have not.", "Press SMS the rest to nudge those who have not read it yet."],
+      tips: ["Opening the SMS link counts as read. No sign-in is needed.", "Archive old notices; they stay in the record."] },
+    { t: "নোটিশ ও পড়ার প্রমাণ", s: "একবার নোটিশ প্রকাশ করুন এবং ঠিক কে পড়েছেন আর কে পড়েননি দেখুন।",
+      steps: ["অ্যাডমিন, সভাপতি বা সম্পাদক: নোটিশ খুলে নতুন নোটিশ চাপুন।", "দুই ট্যাব ব্যবহার করে ইংরেজি ও বাংলায় শিরোনাম ও বার্তা লিখুন। বাংলা ব্যবহারকারী বাংলা সংস্করণ দেখেন; ফাঁকা থাকলে ইংরেজি দেখেন।", "কাদের জন্য (সবাই, মালিক, ভাড়াটিয়া, কমিটি), অগ্রাধিকার এবং পিন করবেন কি না বেছে নিন। অ্যাপের বাইরের মানুষের কাছে পৌঁছাতে এসএমএসে লিংকসহ পাঠান টিক দিন।", "নোটিশ খুলে Y জনের মধ্যে X জন পড়েছেন, কীভাবে (অ্যাপ না এসএমএস লিংক) এবং যাঁরা পড়েননি তাঁদের তালিকা দেখুন।", "যাঁরা এখনও পড়েননি তাঁদের মনে করাতে বাকিদের এসএমএস চাপুন।"],
+      tips: ["এসএমএসের লিংক খুললেই পড়া গণ্য হয়। সাইন ইন লাগে না।", "পুরনো নোটিশ আর্কাইভ করুন; সেগুলো রেকর্ডে থাকে।"] }),
+
+  art("policies-acceptance", "comms", CUSTOMER_ROLES, 2,
+    { route: "/app/policies", feature: "policies", shots: [["policy-accept", "An owner accepts a policy", "মালিক নীতিমালা গ্রহণ করছেন"], ["policy-history", "Acceptance history", "গ্রহণের ইতিহাস"]], related: ["notices-read-proof"], keywords: "policy house rules version accept acceptance history নীতিমালা নিয়ম সংস্করণ গ্রহণ" },
+    { t: "Policies that everyone accepts", s: "House rules with versions. When you publish a new version, everyone must read and accept it again.",
+      steps: ["Open Policies. Residents see each policy with its current version.", "Resident: read the text and press I have read and accept. Your acceptance is recorded with the version and time.", "Admin or committee: press New policy, enter the name and the text in English and Bangla, and publish.", "To change a policy press Publish new version and say what changed. The old version is kept and never overwritten.", "Open History to see who accepted each version and who has yet to accept."],
+      tips: ["When a policy is updated residents see Updated. Please read and accept again.", "Use a policy for rules you may need to point to later, like parking or hall use."] },
+    { t: "যে নীতিমালা সবাই মেনে নেন", s: "সংস্করণসহ বাড়ির নিয়ম। নতুন সংস্করণ প্রকাশ করলে সবাইকে আবার পড়ে মানতে হয়।",
+      steps: ["নীতিমালা খুলুন। বাসিন্দারা প্রতিটি নীতিমালা তার বর্তমান সংস্করণসহ দেখেন।", "বাসিন্দা: লেখা পড়ে আমি পড়েছি ও মেনে নিলাম চাপুন। আপনার সম্মতি সংস্করণ ও সময়সহ লেখা হয়।", "অ্যাডমিন বা কমিটি: নতুন নীতিমালা চেপে ইংরেজি ও বাংলায় নাম ও লেখা দিয়ে প্রকাশ করুন।", "বদলাতে নতুন সংস্করণ প্রকাশ করুন চেপে কী বদলাল লিখুন। পুরনো সংস্করণ থাকে, কখনও মুছে যায় না।", "ইতিহাস খুলে প্রতিটি সংস্করণ কে মেনেছেন আর কে এখনও মানেননি দেখুন।"],
+      tips: ["নীতিমালা হালনাগাদ হলে বাসিন্দারা হালনাগাদ হয়েছে, আবার পড়ে মানুন লেখা দেখেন।", "পার্কিং বা হল ব্যবহারের মতো যে নিয়মের কথা পরে বলতে হতে পারে সেগুলোর জন্য নীতিমালা ব্যবহার করুন।"] }),
+
+  art("sms-email-credits", "comms", [...MGR, "TREASURER", "PRESIDENT"], 3,
+    { route: "/app/credits", shots: [["credits", "Buy SMS and email credits", "এসএমএস ও ইমেইল ক্রেডিট কিনুন"], ["sms-log", "Messages sent", "পাঠানো বার্তা"]], related: ["dues-reminders", "notices-read-proof"], keywords: "sms email credits balance top up buy pack bkash vat invoice low alert ক্রেডিট রিচার্জ এসএমএস ইমেইল" },
+    { t: "SMS and email credits", s: "Reminders, notices, OTP codes and payslips use one credit per message. Keep a balance so they are never lost.",
+      steps: ["Open SMS and email credits. See your balance, what was used in the last 30 days and where it went (reminders, notices, OTP codes, payslips).", "Set a low-balance alert level so the page warns you before credits run out.", "Choose a pack under Buy credits and press Buy. The price, VAT and total are shown.", "Pay online (bKash, Nagad or card), or pay by transfer to the number shown and enter the transaction ID with I paid by transfer.", "A transfer is checked by FlatWise finance, then credits are added. You get a tax invoice and receipt in the purchases list."],
+      tips: ["With zero credit a message shows as failed instead of being lost. Top up, then resend.", "Each building has its own SMS and email balance."] },
+    { t: "এসএমএস ও ইমেইল ক্রেডিট", s: "রিমাইন্ডার, নোটিশ, ওটিপি কোড ও পে-স্লিপে প্রতি বার্তায় একটি ক্রেডিট লাগে। ব্যালান্স রাখুন যাতে কিছু হারিয়ে না যায়।",
+      steps: ["এসএমএস ও ইমেইল ক্রেডিট খুলুন। আপনার ব্যালান্স, গত ৩০ দিনে কত ব্যবহার এবং কোথায় (রিমাইন্ডার, নোটিশ, ওটিপি কোড, পে-স্লিপ) গেছে দেখুন।", "কম ব্যালান্সের সতর্কতার মাত্রা ঠিক করুন, যাতে ক্রেডিট শেষের আগে পাতা সতর্ক করে।", "ক্রেডিট কিনুন অংশে একটি প্যাক বেছে কিনুন চাপুন। দাম, ভ্যাট ও মোট দেখায়।", "অনলাইনে (বিকাশ, নগদ বা কার্ড) দিন, অথবা দেখানো নম্বরে ট্রান্সফার করে ট্রান্সফারে দিয়েছি চেপে ট্রানজেকশন আইডি দিন।", "ট্রান্সফার ফ্ল্যাটওয়াইজ ফাইন্যান্স যাচাই করে ক্রেডিট যোগ করে। ক্রয়ের তালিকায় কর ইনভয়েস ও রসিদ পাবেন।"],
+      tips: ["ক্রেডিট শূন্য হলে বার্তা হারিয়ে না গিয়ে ব্যর্থ দেখায়। রিচার্জ করে আবার পাঠান।", "প্রতিটি ভবনের নিজস্ব এসএমএস ও ইমেইল ব্যালান্স আছে।"] }),
+];
+export default COMMS;

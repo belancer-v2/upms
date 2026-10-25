@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 from .. import config
 from ..audit import audit
 from ..db import get_db
+from ..services.storage import get_storage
 from ..deps import Ctx, property_ctx
 from ..models.core import AuditLog, Membership, now
 from ..models.property import Unit
@@ -85,10 +86,10 @@ def _row(v: Visit, units: dict, ctx: Ctx, hours: int) -> dict:
 
 
 def _resident_row(v: Visit, units: dict) -> dict:
-    """What a resident sees about a visitor to their own flat. No guard notes, no photo."""
+    """What a resident sees about a visitor to their own flat: no guard notes. They can see the visitor's photo (decision: residents may see photos of visitors to their own flat)."""
     return {"id": v.id, "unit_id": v.unit_id, "unit": units.get(v.unit_id, ""), "name": v.name, "phone": v.phone, "purpose": v.purpose, "people": v.people, "vehicle": v.vehicle,
             "kind": v.kind, "status": v.status, "via": v.decision_via, "created_at": _iso(v.created_at), "decided_at": _iso(v.decided_at), "in_at": _iso(v.in_at), "out_at": _iso(v.out_at),
-            "can_decide": v.status == "waiting"}
+            "can_decide": v.status == "waiting", "photo": bool(v.photo_file)}
 
 
 def _log(db: Session, ctx: Ctx, action: str, entity: str, eid, meta: dict | None = None) -> None:
@@ -281,12 +282,11 @@ async def upload_photo(vid: int, file: UploadFile = File(...), ctx: Ctx = Depend
     real = "image/png" if data.startswith(b"\x89PNG\r\n\x1a\n") else "image/jpeg" if data.startswith(b"\xff\xd8\xff") else None
     if real != file.content_type:
         raise HTTPException(422, "The file is not a valid JPG or PNG photo")
-    folder = config.UPLOAD_DIR / "visitors" / str(ctx.property.id)
-    folder.mkdir(parents=True, exist_ok=True)
+    folder = f"visitors/{ctx.property.id}"
     name = f"v{v.id}_{secrets.token_hex(6)}.{PHOTO_TYPES[real]}"
-    (folder / name).write_bytes(data)
+    get_storage().put(f"{folder}/{name}", data, real)
     if v.photo_file:
-        (folder / v.photo_file).unlink(missing_ok=True)
+        get_storage().delete(f"{folder}/{v.photo_file}")
     v.photo_file, v.photo_type = name, real
     db.commit()
     return _row(v, _units(db, ctx), ctx, _settings(db, ctx.property.id).overstay_hours)
@@ -295,12 +295,13 @@ async def upload_photo(vid: int, file: UploadFile = File(...), ctx: Ctx = Depend
 @router.get("/visits/{vid}/photo")
 def photo(vid: int, ctx: Ctx = Depends(property_ctx), db: Session = Depends(get_db)):
     _gate(ctx)
-    ctx.need(*SEE_PHOTO)
     v = _visit(db, ctx, vid)
-    path = config.UPLOAD_DIR / "visitors" / str(ctx.property.id) / v.photo_file if v.photo_file else None
-    if not path or not path.exists():
+    if not ctx.has(*SEE_PHOTO) and v.unit_id not in _my_units(ctx):
+        raise HTTPException(403, "Your role cannot do this")   # residents see photos of visitors to their own flat only
+    key = f"visitors/{ctx.property.id}/{v.photo_file}" if v.photo_file else None
+    if not key or not get_storage().exists(key):
         raise HTTPException(404, "No photo")
-    return FileResponse(path, media_type=v.photo_type, headers={"Cache-Control": "private, max-age=3600"})
+    return get_storage().serve(key, v.photo_type, headers={"Cache-Control": "private, max-age=3600"})
 
 
 # ---------------------------------------------------------------- the gate board, the log and the reports

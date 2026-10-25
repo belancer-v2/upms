@@ -45,7 +45,7 @@ export default function Units() {
   const changed = async (u: Unit, temp?: string | null) => { await load(); setOpen(u); if (temp) toast.show(t("unit.person.temp", { pw: temp })); };
   return (
     <>
-      <PageHead title={t("unit.title")} sub={t("unit.sub")} actions={<>{has("PROPERTY_ADMIN", "AGENCY_MANAGER") && <Btn onClick={() => setAdd(true)}>{t("unit.add")}</Btn>}<Tabs value={view} onChange={setView} items={[{ id: "map", label: t("unit.map") }, { id: "list", label: t("unit.list") }]} /></>} />
+      <PageHead helpKey="add-flats" title={t("unit.title")} sub={t("unit.sub")} actions={<>{has("PROPERTY_ADMIN", "AGENCY_MANAGER") && <Btn onClick={() => setAdd(true)}>{t("unit.add")}</Btn>}<Tabs value={view} onChange={setView} items={[{ id: "map", label: t("unit.map") }, { id: "list", label: t("unit.list") }]} /></>} />
       {sum && <div className="grid g4" style={{ marginBottom: 22 }}>
         <Stat label={t("unit.summary.units")} value={sum.units} /><Stat label={t("unit.summary.occupied")} value={sum.occupied} note={`${sum.units ? Math.round((100 * sum.occupied) / sum.units) : 0}%`} />
         <Stat label={t("unit.summary.vacant")} value={sum.vacant + sum.to_let + sum.to_let_pending} note={`${t("unit.status.to_let")}: ${sum.to_let} · ${t("unit.status.to_let_pending")}: ${sum.to_let_pending}`} /><Stat label={t("unit.summary.owners")} value={sum.owners} note={`${t("unit.summary.tenants")}: ${sum.tenants}`} /></div>}

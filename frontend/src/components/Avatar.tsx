@@ -44,7 +44,7 @@ function blobFor(kind: PersonKind, id: number, ver: number): Promise<string> {
   let p = blobs.get(key);
   if (!p) {
     p = fetch(`/api/profiles/${kind}/${id}/photo?v=${ver}`, { headers: authHeaders() })
-      .then((r) => { if (!r.ok) throw new Error("no photo"); return r.blob(); })
+      .then((r) => { if (!r.ok) throw new Error("no photo") /* i18n-ok internal */; return r.blob(); })
       .then((b) => URL.createObjectURL(b));
     p.catch(() => blobs.delete(key));
     blobs.set(key, p);

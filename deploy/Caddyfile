@@ -1,0 +1,25 @@
+# TLS is automatic for a real domain (set SITE_ADDRESS). "localhost" gets a local self-signed certificate.
+{$SITE_ADDRESS:localhost} {
+	encode gzip zstd
+	request_body {
+		max_size 12MB
+	}
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options nosniff
+		-Server
+	}
+	handle /api/* {
+		reverse_proxy api:8000
+	}
+	handle /healthz {
+		reverse_proxy api:8000
+	}
+	handle {
+		reverse_proxy web:3000
+	}
+	log {
+		output stdout
+		format json
+	}
+}

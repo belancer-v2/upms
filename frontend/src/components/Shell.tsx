@@ -44,12 +44,12 @@ export function Shell({ children }: { children: ReactNode }) {
       </aside>
       <div className="main">
         <header className="topbar">
-          <button className="icon-btn menu-btn" aria-label="Menu" onClick={() => setOpen(!open)}><svg viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18" /></svg></button>
+          <button className="icon-btn menu-btn" aria-label={t("a11y.menu")} onClick={() => setOpen(!open)}><svg viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18" /></svg></button>
           {properties.length > 0 && !path.startsWith("/app/saas") && (
             <div className="row" style={{ gap: 8 }}>
               <span className="small muted">{t("shell.building")}</span>
               {properties.length > 1
-                ? <select className="input" style={{ width: 230, minHeight: 40, padding: "6px 12px" }} value={prop?.id ?? 0} onChange={(e) => { setProp(Number(e.target.value)); window.location.reload(); }} aria-label={t("shell.building")}>
+                ? <select className="input building-switch" value={prop?.id ?? 0} onChange={(e) => { setProp(Number(e.target.value)); window.location.reload(); }} aria-label={t("shell.building")}>
                     {properties.map((p) => <option key={p.id} value={p.id}>{pick(p.name, p.name_bn)}</option>)}</select>
                 : <b>{pick(prop?.name, prop?.name_bn)}</b>}
             </div>

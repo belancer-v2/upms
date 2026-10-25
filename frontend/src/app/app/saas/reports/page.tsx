@@ -4,13 +4,13 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Bar, Btn, Card, Chip, Empty, Field, PageHead, Stat, Tabs } from "@/components/ui";
 import { HBars, BarChart, LineChart, MovementChart, monthLabel } from "@/components/saascharts";
 import { api, fdate, money, store } from "@/lib/api";
+import { keyLabel } from "@/lib/act";
 import { useT } from "@/lib/i18n";
 
 type Meta = { reports: string[]; plans: string[]; bands: string[]; cities: string[]; role: string };
 const todayISO = () => new Date().toISOString().slice(0, 10);
 const yearAgoISO = () => { const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - 11); return d.toISOString().slice(0, 10); };
 const pct = (n: number | null | undefined) => (n === null || n === undefined ? "-" : `${n}%`);
-const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 export default function Reports() {
   const { t } = useT();
@@ -47,16 +47,16 @@ export default function Reports() {
   return (
     <>
       <style>{`.rep-print-head{display:none} @media print{.rep-print-head{display:block;margin-bottom:12px} .card{break-inside:avoid} @page{size:A4 landscape;margin:12mm}}`}</style>
-      <PageHead title={t("rep.title")} sub={t("rep.sub")} actions={<div className="no-print row"><Btn variant="outline" onClick={() => window.print()}>{t("rep.print")}</Btn><Btn onClick={csv}>{t("rep.export")}</Btn></div>} />
+      <PageHead helpKey="saas-invoices" title={t("rep.title")} sub={t("rep.sub")} actions={<div className="no-print row"><Btn variant="outline" onClick={() => window.print()}>{t("rep.print")}</Btn><Btn onClick={csv}>{t("rep.export")}</Btn></div>} />
       <div className="no-print" style={{ marginBottom: 14 }}><Tabs value={tab} onChange={setTab} items={meta.reports.map((r) => ({ id: r, label: t(`rep.t.${r}`) }))} /></div>
       <div className="no-print grid g4" style={{ marginBottom: 18, alignItems: "end" }}>
         <Field label={t("rep.from")}><input className="input" type="date" value={f.from} max={f.to} onChange={(e) => setF({ ...f, from: e.target.value })} /></Field>
         <Field label={t("rep.to")}><input className="input" type="date" value={f.to} min={f.from} onChange={(e) => setF({ ...f, to: e.target.value })} /></Field>
-        {!funnelOnly && <Field label={t("rep.plan")}><select className="input" value={f.plan} onChange={(e) => setF({ ...f, plan: e.target.value })}><option value="">{t("rep.allplans")}</option>{meta.plans.map((p) => <option key={p} value={p}>{cap(p)}</option>)}</select></Field>}
+        {!funnelOnly && <Field label={t("rep.plan")}><select className="input" value={f.plan} onChange={(e) => setF({ ...f, plan: e.target.value })}><option value="">{t("rep.allplans")}</option>{meta.plans.map((p) => <option key={p} value={p}>{keyLabel(t, p)}</option>)}</select></Field>}
         <Field label={t("rep.band")}><select className="input" value={f.band} onChange={(e) => setF({ ...f, band: e.target.value })}><option value="">{t("rep.allbands")}</option>{meta.bands.map((b) => <option key={b} value={b}>{b}</option>)}</select></Field>
         <Field label={t("rep.city")}><select className="input" value={f.city} onChange={(e) => setF({ ...f, city: e.target.value })}><option value="">{t("rep.allcities")}</option>{meta.cities.map((c) => <option key={c} value={c}>{c}</option>)}</select></Field>
       </div>
-      <div className="rep-print-head"><b>FlatWise · {t(`rep.t.${tab}`)}</b><div className="small">{fdate(f.from)} - {fdate(f.to)}{f.plan ? ` · ${cap(f.plan)}` : ""}{f.band ? ` · ${f.band}` : ""}{f.city ? ` · ${f.city}` : ""} · {t("rep.generated", { d: fdate(new Date().toISOString()) })}</div></div>
+      <div className="rep-print-head"><b>FlatWise · {t(`rep.t.${tab}`)}</b><div className="small">{fdate(f.from)} - {fdate(f.to)}{f.plan ? ` · ${keyLabel(t, f.plan)}` : ""}{f.band ? ` · ${f.band}` : ""}{f.city ? ` · ${f.city}` : ""} · {t("rep.generated", { d: fdate(new Date().toISOString()) })}</div></div>
       {err && <p className="muted">{err}</p>}
       {!d && !err && <p className="muted">{t("common.loading")}</p>}
       {ok && tab === "revenue" && <Revenue d={d} />}
@@ -86,7 +86,7 @@ function Revenue({ d }: { d: any }) {
         <Card><h3>{t("rep.rev.type")}</h3>
           <BarChart label={t("rep.rev.type")} labels={labels} series={[{ name: t("rep.rev.subscription"), color: "var(--primary)", values: d.series.map((r: any) => r.subscription) }, { name: t("rep.rev.credits"), color: "var(--info)", values: d.series.map((r: any) => r.credits) }, { name: t("rep.rev.setup"), color: "var(--warn)", values: d.series.map((r: any) => r.setup) }]} /></Card>
         <div className="stack">
-          <Card><h3>{t("rep.rev.byplan")}</h3>{d.by_plan.length ? <div style={{ marginTop: 12 }}><HBars rows={d.by_plan.map((p: any) => ({ key: p.key, label: cap(p.key), value: p.amount }))} fmt={money} /></div> : <Empty>{t("rep.none")}</Empty>}</Card>
+          <Card><h3>{t("rep.rev.byplan")}</h3>{d.by_plan.length ? <div style={{ marginTop: 12 }}><HBars rows={d.by_plan.map((p: any) => ({ key: p.key, label: keyLabel(t, p.key), value: p.amount }))} fmt={money} /></div> : <Empty>{t("rep.none")}</Empty>}</Card>
           <Card><h3>{t("rep.rev.bycity")}</h3>{d.by_city.length ? <div style={{ marginTop: 12 }}><HBars color="var(--info)" rows={d.by_city.map((p: any) => ({ key: p.key, label: p.key, value: p.amount }))} fmt={money} /></div> : <Empty>{t("rep.none")}</Empty>}</Card>
         </div>
       </div>
@@ -111,7 +111,7 @@ function Mrr({ d }: { d: any }) {
         <MovementChart label={t("rep.mrr.moves")} labels={labels} ups={[{ name: t("rep.mrr.new"), color: "var(--ok)", values: col("new") }, { name: t("rep.mrr.expansion"), color: "var(--info)", values: col("expansion") }]}
           downs={[{ name: t("rep.mrr.contraction"), color: "var(--warn)", values: col("contraction") }, { name: t("rep.mrr.churn"), color: "var(--bad)", values: col("churn") }]} /></Card>
       <div className="grid g2">
-        <Card><h3>{t("rep.mrr.byplan")}</h3>{d.by_plan.length ? <div style={{ marginTop: 12 }}><HBars rows={d.by_plan.map((p: any) => ({ key: p.key, label: cap(p.key), value: p.amount }))} fmt={money} /></div> : <Empty>{t("rep.none")}</Empty>}</Card>
+        <Card><h3>{t("rep.mrr.byplan")}</h3>{d.by_plan.length ? <div style={{ marginTop: 12 }}><HBars rows={d.by_plan.map((p: any) => ({ key: p.key, label: keyLabel(t, p.key), value: p.amount }))} fmt={money} /></div> : <Empty>{t("rep.none")}</Empty>}</Card>
       </div>
       <div className="table-wrap"><table className="t"><thead><tr><th>{t("rep.rev.month")}</th>{["opening", "new", "expansion", "contraction", "churn", "closing"].map((k) => <th key={k} className="num">{t(`rep.mrr.${k}`)}</th>)}<th className="num">ARR</th><th className="num">{t("rep.mrr.customers")}</th></tr></thead>
         <tbody>{d.series.map((r: any) => <tr key={r.month}><td>{monthLabel(r.month)}</td><td className="num">{money(r.start)}</td><td className="num">{money(r.new)}</td><td className="num">{money(r.expansion)}</td><td className="num">{money(r.contraction)}</td><td className="num">{money(r.churn)}</td><td className="num"><b>{money(r.end)}</b></td><td className="num">{money(r.arr)}</td><td className="num">{r.customers_end}</td></tr>)}</tbody></table></div>
@@ -134,7 +134,7 @@ function Customers({ d }: { d: any }) {
       </div>
       <p className="small muted">{t("rep.cu.note")}</p>
       <Card><h3>{t("rep.cu.byplan")}</h3>{d.by_plan.length ? <div className="table-wrap" style={{ marginTop: 10 }}><table className="t"><thead><tr><th>{t("rep.plan")}</th><th className="num">{t("rep.cu.customers")}</th><th className="num">MRR</th></tr></thead>
-        <tbody>{d.by_plan.map((p: any) => <tr key={p.key}><td><b>{cap(p.key)}</b></td><td className="num">{p.customers}</td><td className="num">{money(p.mrr)}</td></tr>)}</tbody></table></div> : <Empty>{t("rep.none")}</Empty>}</Card>
+        <tbody>{d.by_plan.map((p: any) => <tr key={p.key}><td><b>{keyLabel(t, p.key)}</b></td><td className="num">{p.customers}</td><td className="num">{money(p.mrr)}</td></tr>)}</tbody></table></div> : <Empty>{t("rep.none")}</Empty>}</Card>
     </div>
   );
 }
@@ -193,7 +193,7 @@ function Funnel({ d }: { d: any }) {
           <tbody>{d.stages.map((s: any) => <tr key={s.stage}><td><b>{t(`lead.${s.stage}`)}</b></td><td className="num">{s.now}</td><td className="num">{s.reached}</td><td className="num">{pct(s.conv_pct)}</td><td className="num">{s.avg_days ?? "-"}</td></tr>)}</tbody></table></div></Card>
       </div>
       <Card><h3>{t("rep.fu.bysource")}</h3>{d.by_source.length ? <div className="table-wrap" style={{ marginTop: 10 }}><table className="t"><thead><tr><th>{t("rep.fu.source")}</th><th className="num">{t("rep.fu.total")}</th><th className="num">{t("rep.fu.won")}</th><th className="num">{t("rep.fu.lost")}</th><th className="num">{t("rep.fu.win")}</th></tr></thead>
-        <tbody>{d.by_source.map((s: any) => <tr key={s.source}><td><b>{cap(s.source)}</b></td><td className="num">{s.total}</td><td className="num">{s.won}</td><td className="num">{s.lost}</td><td className="num">{s.win_pct}%</td></tr>)}</tbody></table></div> : <Empty>{t("rep.none")}</Empty>}</Card>
+        <tbody>{d.by_source.map((s: any) => <tr key={s.source}><td><b>{keyLabel(t, s.source)}</b></td><td className="num">{s.total}</td><td className="num">{s.won}</td><td className="num">{s.lost}</td><td className="num">{s.win_pct}%</td></tr>)}</tbody></table></div> : <Empty>{t("rep.none")}</Empty>}</Card>
     </div>
   );
 }
@@ -205,7 +205,7 @@ function Health({ d, q, setQ, page, setPage }: { d: any; q: string; setQ: (v: st
     <div>
       <div className="toolbar no-print"><input className="input" placeholder={t("common.search")} value={q} onChange={(e) => setQ(e.target.value)} aria-label={t("common.search")} /></div>
       <div className="table-wrap"><table className="t"><thead><tr><th>{t("rep.he.building")}</th><th>{t("rep.plan")}</th><th className="num">{t("rep.he.users")}</th><th className="num">{t("rep.he.active")}</th><th>{t("rep.he.login")}</th><th>{t("rep.he.paid")}</th><th className="num">{t("rep.he.features")}</th><th className="num">{t("rep.he.adopted")}</th></tr></thead>
-        <tbody>{d.rows.map((r: any) => <tr key={r.id}><td><Link href={`/app/saas/buildings/${r.id}`}><b>{r.name}</b></Link><div className="small muted">{r.city}</div></td><td>{cap(r.plan)} {r.band} <Chip tone={r.status === "active" ? "ok" : r.status === "trial" ? "info" : r.status === "past_due" ? "warn" : "mute"}>{t(`sub.${r.status}`)}</Chip></td>
+        <tbody>{d.rows.map((r: any) => <tr key={r.id}><td><Link href={`/app/saas/buildings/${r.id}`}><b>{r.name}</b></Link><div className="small muted">{r.city}</div></td><td>{keyLabel(t, r.plan)} {r.band} <Chip tone={r.status === "active" ? "ok" : r.status === "trial" ? "info" : r.status === "past_due" ? "warn" : "mute"}>{t(`sub.${r.status}`)}</Chip></td>
           <td className="num">{r.users}</td><td className="num">{r.active_users}</td><td className="nowrap">{r.last_login ? fdate(r.last_login) : t("rep.he.never")}</td><td className="nowrap">{r.last_paid ? fdate(r.last_paid) : t("rep.he.never")}</td><td className="num">{r.features_on}</td><td className="num">{r.adopted}</td></tr>)}
           {!d.rows.length && <tr><td colSpan={8}><Empty>{t("rep.none")}</Empty></td></tr>}</tbody></table></div>
       {d.total > d.size && <div className="pager no-print"><span className="small muted">{t("common.total")}: {d.total} · {t("common.page", { n: page, m: pages })}</span>

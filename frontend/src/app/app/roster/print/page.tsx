@@ -15,7 +15,7 @@ function Sheet() {
   const { t, pick, lang } = useT(); const { prop } = useAuth(); const q = useSearchParams().get("start") ?? ""; const [r, setR] = useState<R | null>(null); const [err, setErr] = useState("");
   useEffect(() => { api<R>(`/agency/roster${q ? `?start=${q}` : ""}`).then(setR).catch((e) => setErr(e.message)); }, [q, prop?.id]);
   if (err) return <p className="error">{err}</p>; if (!r) return <p className="muted">{t("common.loading")}</p>;
-  const day = (iso: string) => new Date(iso + "T00:00:00Z").toLocaleDateString(lang === "bn" ? "bn-BD" : "en-GB", { weekday: "short", day: "2-digit", month: "short", timeZone: "UTC" });
+  const day = (iso: string) => new Date(iso + "T00:00:00Z").toLocaleDateString("en-GB", { weekday: "short", day: "2-digit", month: "short", timeZone: "UTC" });
   return (<div style={{ maxWidth: 1100, margin: "0 auto" }}>
     <div className="row between no-print" style={{ marginBottom: 12 }}><span /><Btn onClick={() => window.print()}>{t("common.print")}</Btn></div>
     <h1 style={{ textAlign: "center", margin: "0 0 4px" }}>{pick(r.building, r.building_bn || r.building)}</h1>

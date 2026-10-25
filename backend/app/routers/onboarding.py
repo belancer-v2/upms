@@ -10,7 +10,9 @@ from sqlalchemy.orm import Session
 
 from .. import config
 from ..audit import audit
+from ..services.ratelimit import limit as rate_limit
 from ..db import get_db
+from ..services.storage import get_storage
 from ..deps import Ctx, property_ctx
 from ..models.billing import Message
 from ..models.core import Property, User, now
@@ -176,12 +178,12 @@ def doc_file(cid: int, did: int, ctx: Ctx = Depends(property_ctx), db: Session =
     c = _mine(db, ctx, cid, units)
     ctx.need(*(REVIEW | {"PRESIDENT"}))
     d = db.get(TenantDoc, did)
-    path = config.UPLOAD_DIR / str(c.id) / (d.stored if d else "x")
-    if not d or d.case_id != c.id or not path.exists():
+    key = f"{c.id}/{d.stored if d else 'x'}"
+    if not d or d.case_id != c.id or not get_storage().exists(key):
         raise HTTPException(404, "Not found")
     audit(db, user_id=ctx.user.id, org_id=ctx.property.org_id, property_id=ctx.property.id, action="onboarding.doc.view", entity="case", entity_id=c.id, meta={"kind": d.kind})
     db.commit()
-    return FileResponse(path, media_type=d.content_type, filename=d.filename)
+    return get_storage().serve(key, d.content_type, d.filename)
 
 
 @router.post("/cases/{cid}/verify")
@@ -287,7 +289,7 @@ def _by_token(db: Session, token: str) -> TenantCase:
     return c
 
 
-@router.get("/link/{token}")
+@router.get("/link/{token}", dependencies=[Depends(rate_limit("link", 120, 600))])
 def link_get(token: str, db: Session = Depends(get_db)):
     c = _by_token(db, token)
     p, u = db.get(Property, c.property_id), db.get(Unit, c.unit_id)
@@ -311,7 +313,7 @@ class DetailsIn(BaseModel):
     reference_phone: str = ""
 
 
-@router.put("/link/{token}")
+@router.put("/link/{token}", dependencies=[Depends(rate_limit("linkw", 60, 600))])
 def link_save(token: str, body: DetailsIn, db: Session = Depends(get_db)):
     c = _by_token(db, token)
     if c.status != "invited":
@@ -328,7 +330,7 @@ def link_save(token: str, body: DetailsIn, db: Session = Depends(get_db)):
     return link_get(token, db)
 
 
-@router.post("/link/{token}/docs", status_code=201)
+@router.post("/link/{token}/docs", status_code=201, dependencies=[Depends(rate_limit("linkup", 30, 600))])
 async def link_upload(token: str, kind: str = Form(...), file: UploadFile = File(...), db: Session = Depends(get_db)):
     c = _by_token(db, token)
     if c.status != "invited":
@@ -343,18 +345,18 @@ async def link_upload(token: str, kind: str = Form(...), file: UploadFile = File
         raise HTTPException(413, "The file is bigger than 3 MB")
     if not data:
         raise HTTPException(422, "The file is empty")
-    folder = config.UPLOAD_DIR / str(c.id)
-    folder.mkdir(parents=True, exist_ok=True)
+    from ..services import uploads
+    ext = uploads.EXT[uploads.check(data, file.content_type, set(ALLOWED))]    # the bytes must really be the JPG, PNG or PDF the browser claimed
     stored = f"{secrets.token_hex(10)}.{ext}"
-    (folder / stored).write_bytes(data)
+    get_storage().put(f"{c.id}/{stored}", data, file.content_type or "")
     for old in db.scalars(select(TenantDoc).where(TenantDoc.case_id == c.id, TenantDoc.kind == kind)):
         db.delete(old)       # a new upload replaces the earlier one for that slot
-    db.add(TenantDoc(case_id=c.id, kind=kind, filename=(file.filename or stored)[:160], stored=stored, content_type=file.content_type, size=len(data)))
+    db.add(TenantDoc(case_id=c.id, kind=kind, filename=uploads.safe_filename(file.filename, stored), stored=stored, content_type=file.content_type, size=len(data)))
     db.commit()
     return link_get(token, db)
 
 
-@router.post("/link/{token}/submit")
+@router.post("/link/{token}/submit", dependencies=[Depends(rate_limit("linkw", 60, 600))])
 def link_submit(token: str, db: Session = Depends(get_db)):
     c = _by_token(db, token)
     if c.status != "invited":

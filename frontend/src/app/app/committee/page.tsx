@@ -18,7 +18,7 @@ export default function Committee() {
   const edit = has("PROPERTY_ADMIN", "AGENCY_MANAGER", "PRESIDENT", "SECRETARY");
   const [tab, setTab] = useState<"members" | "history" | "meetings" | "votes">("members");
   return (<>
-    <PageHead title={t("cm.title")} sub={t("cm.sub")} />
+    <PageHead helpKey="committee-meetings" title={t("cm.title")} sub={t("cm.sub")} />
     <div style={{ marginBottom: 14 }}><Tabs value={tab} onChange={setTab} items={[{ id: "members", label: t("cm.tab.members") }, { id: "history", label: t("cm.tab.history") }, { id: "meetings", label: t("cm.tab.meetings") }, { id: "votes", label: t("cm.tab.votes") }]} /></div>
     {(tab === "members" || tab === "history") && <Members key={tab + prop?.id} scope={tab === "members" ? "current" : "history"} edit={edit} toast={toast.show} />}
     {tab === "meetings" && <Meetings key={prop?.id} edit={edit} toast={toast.show} />}

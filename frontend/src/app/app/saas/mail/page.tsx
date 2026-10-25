@@ -23,7 +23,7 @@ export default function Mail() {
     { id: "templates" as Tab, label: t("mail.tab.templates") }, { id: "audiences" as Tab, label: t("mail.tab.audiences") }, { id: "suppression" as Tab, label: t("mail.tab.suppression") }, { id: "outbox" as Tab, label: t("mail.tab.outbox") }] : [])];
   return (
     <>
-      <PageHead title={t("mail.title")} sub={t("mail.sub")} />
+      <PageHead helpKey="saas-email-campaigns" title={t("mail.title")} sub={t("mail.sub")} />
       <div style={{ marginBottom: 18, overflowX: "auto" }}><Tabs value={tab} onChange={setTab} items={items} /></div>
       {tab === "campaigns" && <Campaigns edit={edit} admin={admin} />}
       {tab === "templates" && edit && <TemplatesTab />}

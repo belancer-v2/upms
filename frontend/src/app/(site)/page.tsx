@@ -18,9 +18,9 @@ function HeroMock() {
           <div className="note" style={{ marginTop: 8 }}><span className="sq" /><b>{t("site.mock.notice")}</b></div>
           <div className="note" style={{ marginTop: 8 }}><span className="sq r" /><span className="muted">{t("site.mock.due")}</span></div></div>
       </div>
-      <div className="phone"><div className="top">Today</div><div className="body">
-        <span className="btn btn-primary">{t("site.mock.record")}</span><span className="btn btn-outline">Meter</span><Chip tone="info">{t("site.mock.sync")}</Chip>
-        <div className="note"><Chip tone="ok">Paid</Chip><span className="small">Unit B-302</span></div><div className="note"><Chip tone="warn">Due</Chip><span className="small">Unit A-501</span></div></div></div>
+      <div className="phone"><div className="top">{t("site.mock.today")}</div><div className="body">
+        <span className="btn btn-primary">{t("site.mock.record")}</span><span className="btn btn-outline">{t("site.mock.meter")}</span><Chip tone="info">{t("site.mock.sync")}</Chip>
+        <div className="note"><Chip tone="ok">{t("site.mock.paid")}</Chip><span className="small">{t("site.mock.unit", { n: "B-302" })}</span></div><div className="note"><Chip tone="warn">{t("site.mock.duechip")}</Chip><span className="small">{t("site.mock.unit", { n: "A-501" })}</span></div></div></div>
     </div>
   );
 }

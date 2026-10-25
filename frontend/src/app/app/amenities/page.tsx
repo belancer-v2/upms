@@ -51,9 +51,9 @@ export default function Amenities() {
   const amenity = list?.find((a) => a.id === aid);
   const tabs = [{ id: "cal" as const, label: t("am.tab.cal") }, ...(resident ? [{ id: "mine" as const, label: t("am.tab.mine") }] : []),
     ...(staff ? [{ id: "queue" as const, label: pending ? `${t("am.tab.queue")} (${pending})` : t("am.tab.queue") }] : []), ...(decide ? [{ id: "set" as const, label: t("am.tab.set") }] : [])];
-  if (err) return <><PageHead title={t("am.title")} /><Card><p className="error" role="alert">{err.includes("plan") ? t("am.upgrade") : err}</p></Card></>;
+  if (err) return <><PageHead helpKey="hall-booking" title={t("am.title")} /><Card><p className="error" role="alert">{err.includes("plan") ? t("am.upgrade") : err}</p></Card></>;
   return (<>
-    <PageHead title={t("am.title")} sub={t("am.sub")} actions={resident && amenity ? <Btn onClick={() => setForm({ date: "", slot: "" })}>{t("am.request")}</Btn> : undefined} />
+    <PageHead helpKey="hall-booking" title={t("am.title")} sub={t("am.sub")} actions={resident && amenity ? <Btn onClick={() => setForm({ date: "", slot: "" })}>{t("am.request")}</Btn> : undefined} />
     <div style={{ marginBottom: 14 }}><Tabs value={tab} onChange={setTab} items={tabs} /></div>
     {!list ? <p className="muted">{t("common.loading")}</p> : <>
       {tab === "cal" && <CalendarTab list={list} aid={aid} setAid={setAid} resident={resident} onPick={(d, s) => setForm({ date: d, slot: s })} />}
@@ -76,7 +76,7 @@ function CalendarTab({ list, aid, setAid, resident, onPick }: { list: Amenity[];
   return (<>
     <div className="toolbar">
       <select className="input" aria-label={t("am.f.amenity")} style={{ maxWidth: 260 }} value={aid} onChange={(e) => setAid(Number(e.target.value))}>{list.map((x) => <option key={x.id} value={x.id}>{pick(x.name, x.name_bn)}</option>)}</select>
-      <div className="row"><Btn variant="ghost" size="sm" onClick={() => setMonth(shiftMonth(month, -1))}>{t("common.prev")}</Btn><b style={{ minWidth: 110, textAlign: "center" }}>{new Date(`${month}-01T00:00`).toLocaleDateString(lang === "bn" ? "bn-BD" : "en-GB", { month: "long", year: "numeric" })}</b><Btn variant="ghost" size="sm" onClick={() => setMonth(shiftMonth(month, 1))}>{t("common.next")}</Btn></div>
+      <div className="row"><Btn variant="ghost" size="sm" onClick={() => setMonth(shiftMonth(month, -1))}>{t("common.prev")}</Btn><b style={{ minWidth: 110, textAlign: "center" }}>{new Date(`${month}-01T00:00`).toLocaleDateString("en-GB", { month: "long", year: "numeric" })}</b><Btn variant="ghost" size="sm" onClick={() => setMonth(shiftMonth(month, 1))}>{t("common.next")}</Btn></div>
     </div>
     <div className="row wrap small" style={{ gap: 10, marginBottom: 10 }}>{["free", "pending", "held", "booked", "blackout"].map((s) => <span key={s} className="row" style={{ gap: 6 }}><i style={{ width: 14, height: 14, borderRadius: 4, background: CELL[s].bg, border: `1px solid ${CELL[s].fg}`, display: "inline-block" }} />{t(`am.state.${s}`)}</span>)}</div>
     {a && <Card style={{ padding: 8 }}>

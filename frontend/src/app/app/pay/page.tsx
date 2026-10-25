@@ -1,4 +1,5 @@
 "use client";
+import { ExportButton } from "@/components/ExportButton";
 import { useCallback, useEffect, useState } from "react";
 import { BillChip, type Inv } from "@/components/billbits";
 import { PayForm } from "@/components/PayForm";
@@ -6,6 +7,7 @@ import { GatewayPay, useGateway } from "@/components/GatewayPay";
 import { Btn, Card, Empty, PageHead, Stat, useToast } from "@/components/ui";
 import { api, fdate, money } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { periodLabel } from "@/lib/act";
 import { useT } from "@/lib/i18n";
 
 export default function Pay() {
@@ -16,13 +18,13 @@ export default function Pay() {
   if (!rows) return <p className="muted">{t("common.loading")}</p>;
   const owed = rows.filter((r) => r.status !== "paid" && r.status !== "void").reduce((a, r) => a + r.balance, 0);
   return (<>
-    <PageHead title={t("pay.title")} sub={t("pay.sub")} />
+    <PageHead helpKey="pay-service-charge" title={t("pay.title")} sub={t("pay.sub")} actions={<ExportButton name="invoices" />} />
     <div className="grid g3" style={{ marginBottom: 16 }}><Stat label={t("bill.outstanding")} value={money(owed)} /><Stat label={t("bill.tab.invoices")} value={rows.length} /></div>
     {cash.map((e) => (<Card key={e.id} style={{ marginBottom: 12, borderColor: "var(--warn)" }}><div className="row between wrap"><div><h3 style={{ margin: 0 }}>{t("cash.payer_title")} · {e.unit}</h3><p className="small muted" style={{ margin: "4px 0 0" }}>{t("cash.payer_note", { a: money(e.amount) })}</p></div>
       <Btn onClick={async () => { await api(`/cash/entries/${e.id}/confirm`, { method: "POST" }); toast.show(t("cash.confirmed")); load(); }}>{t("cash.payer_confirm")}</Btn></div></Card>))}
     {rows.length === 0 && <Card><Empty>{t("pay.none")}</Empty></Card>}
     <div className="stack">{rows.slice(0, 6).map((i) => { const d = detail[i.id]; return (
-      <Card key={i.id}><div className="row between wrap"><div><h3 style={{ margin: 0 }}>{i.period} · {i.unit}</h3><span className="small muted">{t("bill.due")} {fdate(i.due_date)}</span></div>
+      <Card key={i.id}><div className="row between wrap"><div><h3 style={{ margin: 0 }}>{periodLabel(t, i.period)} · {i.unit}</h3><span className="small muted">{t("bill.due")} {fdate(i.due_date)}</span></div>
         <div className="row"><BillChip s={i.status} /><b>{money(i.total)}</b>{i.status !== "paid" && i.status !== "void" && <>{gw?.enabled && i.balance > 0 && <Btn size="sm" onClick={() => setGwInv(i)}>{t("gw.pay_now")}</Btn>}<Btn size="sm" variant={gw?.enabled ? "outline" : "primary"} onClick={() => setOpen(i)}>{t("pay.i_paid")}</Btn></>}</div></div>
         {d?.lines && <div style={{ marginTop: 10 }}>{d.lines.map((l, k) => <div key={k} className="row between small" style={{ padding: "4px 0", borderTop: "1px solid var(--line)" }}><span>{pick(l.description, l.description_bn || l.description)}</span><span>{money(l.amount)}</span></div>)}
           {d.payments?.map((p) => <div key={p.id} className="row between small" style={{ padding: "4px 0" }}><span>{fdate(p.paid_on)} · {t(`bill.m.${p.method}`)} <BillChip s={p.status} /></span>

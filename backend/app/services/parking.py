@@ -73,3 +73,23 @@ def flag_tenant_vehicles(db: Session, unit: Unit, user_id: int, org_id: int) -> 
     if rows:
         audit(db, user_id=user_id, org_id=org_id, property_id=unit.property_id, action="parking.vehicles.to_review", entity="unit", entity_id=unit.id, meta={"count": len(rows)})
     return len(rows)
+
+
+def flag_unfit_vehicles(db: Session, unit_id: int, user_id: int, org_id: int, property_id: int) -> int:
+    """A flat lost a slot: vehicles that no longer have a slot of their kind go to 'to review' (newest first), never deleted.
+    Temporary permits are issued separately and are left alone. Returns how many were flagged."""
+    have = held(db, unit_id)
+    flagged = 0
+    for kind in KINDS:
+        vs = db.scalars(select(Vehicle).where(Vehicle.unit_id == unit_id, Vehicle.kind == kind, Vehicle.temporary.is_(False)).order_by(Vehicle.id)).all()
+        excess = len(vs) - have[kind]
+        for v in reversed(vs):
+            if excess <= 0:
+                break
+            if v.status == "active":
+                v.status = "to_review"
+                flagged += 1
+            excess -= 1   # a vehicle already waiting for review counts toward the excess too
+    if flagged:
+        audit(db, user_id=user_id, org_id=org_id, property_id=property_id, action="parking.vehicles.to_review", entity="unit", entity_id=unit_id, meta={"count": flagged, "why": "slot_lost"})
+    return flagged

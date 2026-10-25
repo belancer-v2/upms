@@ -12,7 +12,7 @@ export function SiteHeader() {
   return (
     <header className="site-header"><div className="in">
       <Link href="/" aria-label="FlatWise"><Logo height={32} /></Link>
-      <nav className="site-nav"><L href="/features" k="site.nav.features" /><L href="/pricing" k="site.nav.pricing" /><L href="/demo" k="site.nav.demo" /></nav>
+      <nav className="site-nav"><L href="/features" k="site.nav.features" /><L href="/pricing" k="site.nav.pricing" /><L href="/demo" k="site.nav.demo" /><L href="/help" k="site.nav.help" /></nav>
       <div style={{ flex: 1 }} />
       <Toggles />
       {user ? <Link className="btn btn-primary" href="/app">{t("nav.dashboard")}</Link> : <>

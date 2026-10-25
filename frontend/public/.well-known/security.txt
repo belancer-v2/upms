@@ -1,0 +1,5 @@
+# Placeholder: replace the contact with a mailbox the FlatWise team really reads before launch (see SECURITY.md).
+Contact: mailto:security@REPLACE-WITH-YOUR-DOMAIN
+Expires: 2027-10-25T00:00:00.000Z
+Preferred-Languages: en, bn
+Policy: https://REPLACE-WITH-YOUR-DOMAIN/security

@@ -100,14 +100,14 @@ function MyParking() {
 
 function SlotModal({ slot, manage, onClose, onChange }: { slot: Slot; manage: boolean; onClose: () => void; onChange: (msg?: string) => void }) {
   const { t, pick } = useT(); const [flat, setFlat] = useState(""); const [other, setOther] = useState(""); const [err, setErr] = useState("");
-  const run = async (fn: () => Promise<unknown>) => { try { setErr(""); await fn(); onChange(t("pk.done")); } catch (e: any) { setErr(e.message); } };
+  const run = async (fn: () => Promise<any>) => { try { setErr(""); const r = await fn(); onChange(r?.vehicles_to_review ? t("pk.flagged", { n: r.vehicles_to_review }) : t("pk.done")); } catch (e: any) { setErr(e.message); } };
   const give = () => run(async () => {
     const us = await api<{ id: number; number: string }[]>("/units"); const u = us.find((x) => x.number.toLowerCase() === flat.trim().toLowerCase());
-    if (!u) throw new Error(t("pk.bad_flat")); await api(`/parking/slots/${slot.id}/allocate`, { body: { unit_id: u.id } });
+    if (!u) throw new Error(t("pk.bad_flat")); return api(`/parking/slots/${slot.id}/allocate`, { body: { unit_id: u.id } });
   });
   const swap = () => run(async () => {
     const r = await api<Paged<Slot>>(`/parking/slots?q=${encodeURIComponent(other.trim())}&size=100`); const o = r.items.find((x) => x.code.toLowerCase() === other.trim().toLowerCase());
-    if (!o) throw new Error(t("pk.bad_slot")); await api("/parking/swap", { body: { slot_a: slot.id, slot_b: o.id } });
+    if (!o) throw new Error(t("pk.bad_slot")); return api("/parking/swap", { body: { slot_a: slot.id, slot_b: o.id } });
   });
   return (
     <Modal title={t("pk.slot", { c: slot.code })} onClose={onClose}>
@@ -255,7 +255,7 @@ export default function Parking() {
   const loadSum = useCallback(() => { if (see) api<Sum>("/parking/summary").then(setSum).catch(() => setSum(null)); }, [see]);
   useEffect(() => { loadSum(); }, [loadSum, prop?.id]);
   return (<>
-    <PageHead title={t("pk.title")} sub={t(see ? "pk.sub" : "pk.sub_mine")} />
+    <PageHead helpKey="parking" title={t("pk.title")} sub={t(see ? "pk.sub" : "pk.sub_mine")} />
     {tabs.length > 1 && <div style={{ marginBottom: 14 }}><Tabs value={cur ?? ""} onChange={setTab} items={tabs} /></div>}
     {sum && cur !== "mine" && cur !== "gate" && <div className="grid g4" style={{ marginBottom: 16 }}>
       <Stat label={t("pk.stat.slots")} value={sum.slots} note={`${sum.visitor} ${t("pk.state.visitor").toLowerCase()} · ${sum.blocked} ${t("pk.state.blocked").toLowerCase()}`} /><Stat label={t("pk.stat.free")} value={sum.free} />

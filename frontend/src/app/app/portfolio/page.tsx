@@ -15,7 +15,7 @@ export default function Portfolio() {
   const open = (id: number) => { setProp(id); store.prop = id; router.push("/app/units"); };
   const create = async () => { await api("/portfolio/buildings", { body: f }); setAdd(false); await reload(); load(); };
   return (<>
-    <PageHead title={t("port.title")} sub={t("port.sub")} actions={has("AGENCY_MANAGER") && <Btn onClick={() => setAdd(true)}>{t("port.add")}</Btn>} />
+    <PageHead helpKey="agency-portfolio" title={t("port.title")} sub={t("port.sub")} actions={has("AGENCY_MANAGER") && <Btn onClick={() => setAdd(true)}>{t("port.add")}</Btn>} />
     <div className="grid g3">{rows.map((b) => (
       <Card key={b.id}><h3>{pick(b.name, b.name_bn)}</h3><p className="small muted" style={{ margin: "2px 0 14px" }}>{b.address || b.city}</p>
         <div className="row between small"><b>{t("port.occupancy", { n: b.occupancy_pct })}</b><span className="muted">{t("port.flats", { n: b.units })}</span></div><div style={{ margin: "8px 0 14px" }}><Bar pct={b.occupancy_pct} spark /></div>

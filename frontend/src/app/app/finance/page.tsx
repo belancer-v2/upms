@@ -5,6 +5,7 @@ import { api, fdate, money } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useT } from "@/lib/i18n";
 import MonthlyBudget from "@/components/MonthlyBudget";
+import { ExportButton } from "@/components/ExportButton";
 
 const CATS = ["utilities", "repairs", "salary", "fuel", "services", "other"];
 const METHODS = ["bank", "cash", "bkash", "nagad"];
@@ -42,7 +43,7 @@ export default function Finance() {
   const cname = (c: string) => t(`fin.cat.${c}`);
 
   return (<>
-    <PageHead title={t("fin.title")} sub={t("fin.sub")} actions={<Btn onClick={() => setNewExp(true)}>{t("fin.new")}</Btn>} />
+    <PageHead helpKey="expenses-approvals" title={t("fin.title")} sub={t("fin.sub")} actions={<>{(tab === "expenses" || tab === "ledger") && <ExportButton name={tab} />}<Btn onClick={() => setNewExp(true)}>{t("fin.new")}</Btn></>} />
     {viewer && <div style={{ marginBottom: 16 }}><Tabs value={tab} onChange={setTab} items={items} /></div>}
 
     {tab === "overview" && sum && (<div className="stack">
@@ -112,7 +113,7 @@ function ExpenseModal({ vendors, onClose, onDone }: { vendors: Vendor[]; onClose
     <Field label={t("fin.title_f")}><input className="input" value={f.title} onChange={set("title")} /></Field>
     <div className="grid g2"><Field label={t("fin.category")}><select className="input" value={f.category} onChange={set("category")}>{CATS.map((c) => <option key={c} value={c}>{t(`fin.cat.${c}`)}</option>)}</select></Field><Field label={t("common.amount") + " (BDT)"}><input className="input" inputMode="decimal" value={f.amount} onChange={set("amount")} /></Field></div>
     <div className="grid g2"><Field label={t("fin.date")}><input className="input" type="date" value={f.spent_on} onChange={set("spent_on")} /></Field><Field label={t("fin.vendor")}><select className="input" value={f.vendor_id} onChange={set("vendor_id")}><option value="">{t("fin.no_vendor")}</option>{list.map((v) => <option key={v.id} value={v.id}>{pick(v.name, v.name_bn || v.name)}</option>)}</select></Field></div>
-    <div className="row" style={{ marginBottom: 10 }}><input className="input" placeholder={t("fin.vendor_name")} value={nv} onChange={(e) => setNv(e.target.value)} /><Btn variant="soft" onClick={addV} disabled={nv.trim().length < 2}>{t("fin.add_vendor")}</Btn></div>
+    <div className="row" style={{ marginBottom: 10 }}><input className="input" placeholder={t("fin.vendor_name")} aria-label={t("fin.vendor_name")} value={nv} onChange={(e) => setNv(e.target.value)} /><Btn variant="soft" onClick={addV} disabled={nv.trim().length < 2}>{t("fin.add_vendor")}</Btn></div>
     {+f.amount * 100 > 5_000_000 && <p className="hint">{t("fin.two_note")}</p>}{err && <p className="error" role="alert">{err}</p>}
     <div className="row"><Btn onClick={go} disabled={f.title.trim().length < 3 || !(+f.amount > 0)}>{t("common.save")}</Btn><Btn variant="ghost" onClick={onClose}>{t("common.cancel")}</Btn></div></Modal>;
 }

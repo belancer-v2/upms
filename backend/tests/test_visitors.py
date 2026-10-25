@@ -208,6 +208,21 @@ def test_photo_rules(client):
     client.post(f"{V}/visits/{v['id']}/cancel", headers=hg)
 
 
+def test_resident_sees_photo_of_own_flat_visitor_only(client):
+    hg, ht, ho = prop_headers(client, "guard"), prop_headers(client, "tenant"), prop_headers(client, "owner2")
+    v = _arrive(client, "B-302", "Own Flat Visitor")
+    url = f"{V}/visits/{v['id']}/photo"
+    assert client.get(url, headers=ht).status_code == 404                                                        # own flat, but no photo yet
+    assert client.post(url, files={"file": ("a.png", PNG, "image/png")}, headers=hg).status_code == 200
+    got = client.get(url, headers=ht)
+    assert got.status_code == 200 and got.content == PNG                                                         # tenant of B-302
+    assert client.get(url, headers=ho).status_code == 200                                                        # owner of B-302
+    assert client.get(url, headers=prop_headers(client, "owner")).status_code == 403                              # owner of another flat
+    mine = client.get(f"{V}/mine/pending", headers=ht).json()
+    assert any(x["id"] == v["id"] and x["photo"] is True for x in mine["waiting"])
+    client.post(f"{V}/visits/{v['id']}/cancel", headers=hg)
+
+
 def test_reports_search_paging_and_settings(client):
     hp, hg, hs = prop_headers(client, "padmin"), prop_headers(client, "guard"), prop_headers(client, "secretary")
     s = client.get(f"{V}/summary", headers=hs).json()

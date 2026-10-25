@@ -9,7 +9,7 @@ SaasCreditNote     CN-2026-0001, references an invoice; created when an invoice 
 """
 from datetime import datetime
 
-from sqlalchemy import JSON, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy import BigInteger, DateTime, ForeignKey, Integer, JSON, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from ..db import Base
@@ -26,7 +26,7 @@ class SubscriptionEvent(Base):
     band: Mapped[str] = mapped_column(String(3), default="")
     cycle: Mapped[str] = mapped_column(String(8), default="monthly")
     status: Mapped[str] = mapped_column(String(12), default="")   # subscription status after the event
-    mrr: Mapped[int] = mapped_column(Integer, default=0)           # paisa per month after the event, 0 when not paying
+    mrr: Mapped[int] = mapped_column(BigInteger, default=0)           # paisa per month after the event, 0 when not paying
     by_user_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
 
@@ -78,9 +78,9 @@ class SaasInvoiceDoc(Base):
     seq: Mapped[int] = mapped_column(Integer)
     issued_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
     vat_pct: Mapped[float] = mapped_column(default=15.0)
-    net: Mapped[int] = mapped_column(Integer)            # paisa, before VAT
-    vat: Mapped[int] = mapped_column(Integer)            # paisa
-    total: Mapped[int] = mapped_column(Integer)          # paisa, equals SaasInvoice.amount
+    net: Mapped[int] = mapped_column(BigInteger)            # paisa, before VAT
+    vat: Mapped[int] = mapped_column(BigInteger)            # paisa
+    total: Mapped[int] = mapped_column(BigInteger)          # paisa, equals SaasInvoice.amount
     items: Mapped[list] = mapped_column(JSON, default=list)  # [{desc, desc_bn, qty, net}]
     lang: Mapped[str] = mapped_column(String(2), default="en")
     quote_ref: Mapped[str] = mapped_column(String(40), default="")
@@ -97,8 +97,8 @@ class SaasCreditNote(Base):
     invoice_id: Mapped[int] = mapped_column(ForeignKey("saas_invoices.id"), index=True)
     org_id: Mapped[int] = mapped_column(ForeignKey("organizations.id"), index=True)
     kind: Mapped[str] = mapped_column(String(8), default="void")  # void | refund
-    amount: Mapped[int] = mapped_column(Integer)                  # paisa, VAT included
-    vat: Mapped[int] = mapped_column(Integer, default=0)
+    amount: Mapped[int] = mapped_column(BigInteger)                  # paisa, VAT included
+    vat: Mapped[int] = mapped_column(BigInteger, default=0)
     reason: Mapped[str] = mapped_column(String(200), default="")
     issued_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
     issued_by: Mapped[int | None] = mapped_column(Integer, nullable=True)

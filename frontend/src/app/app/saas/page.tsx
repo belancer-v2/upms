@@ -4,9 +4,10 @@ import { useEffect, useState } from "react";
 import { Bar, Card, Chip, PageHead, Stat } from "@/components/ui";
 import { SubChip, daysLeft } from "@/components/saasbits";
 import { api, fdate, money } from "@/lib/api";
+import { keyLabel } from "@/lib/act";
 import { useT } from "@/lib/i18n";
 
-type Ov = { buildings: Record<string, number>; flats: number; mrr: number | null; mrr_by_plan: Record<string, number> | null; overdue: { count: number; amount: number } | null; trials_ending: { id: number; name: string; trial_ends: string; plan: string }[]; leads: Record<string, number>; sms_low: { id: number; name: string; balance: number }[]; recent: { id: number; name: string; plan: string; status: string; created_at: string }[] };
+type Ov = { buildings: Record<string, number>; flats: number; mrr: number | null; mrr_by_plan: Record<string, number> | null; overdue: { count: number; amount: number } | null; trials_ending: { id: number; name: string; trial_ends: string; plan: string }[]; leads: Record<string, number>; sms_low: { id: number; name: string; balance: number }[]; cancel_requests?: { id: number; org_id: number; org: string; reason: string; created_at: string }[]; recent: { id: number; name: string; plan: string; status: string; created_at: string }[] };
 
 export default function SaasOverview() {
   const { t } = useT(); const [d, setD] = useState<Ov | null>(null);
@@ -16,7 +17,7 @@ export default function SaasOverview() {
   const maxLead = Math.max(1, ...Object.values(d.leads));
   return (
     <>
-      <PageHead title={t("saas.over.title")} sub={t("saas.over.sub")} />
+      <PageHead helpKey="saas-overview" title={t("saas.over.title")} sub={t("saas.over.sub")} />
       <div className="grid g4">
         <Stat label={t("saas.stat.buildings")} value={d.buildings.total} note={`${d.flats} ${t("saas.stat.flats").toLowerCase()}`} />
         <Stat label={t("saas.stat.trial")} value={d.buildings.trial} note={`${d.trials_ending.length} · ${t("saas.over.trials").toLowerCase()}`} />
@@ -25,7 +26,7 @@ export default function SaasOverview() {
       </div>
       <div className="grid g2" style={{ marginTop: 18 }}>
         {d.mrr_by_plan && <Card><h3>{t("saas.over.mrrplan")}</h3><div className="stack" style={{ marginTop: 14 }}>
-          {Object.entries(d.mrr_by_plan).map(([k, v]) => <div key={k}><div className="row between small"><b style={{ textTransform: "capitalize" }}>{k}</b><span>{money(v)}</span></div><Bar pct={(v / maxPlan) * 100} /></div>)}</div></Card>}
+          {Object.entries(d.mrr_by_plan).map(([k, v]) => <div key={k}><div className="row between small"><b>{keyLabel(t, k)}</b><span>{money(v)}</span></div><Bar pct={(v / maxPlan) * 100} /></div>)}</div></Card>}
         <Card><h3>{t("saas.over.pipeline")}</h3><div className="stack" style={{ marginTop: 14 }}>
           {["new", "contacted", "demo", "trial", "won", "lost"].map((k) => <div key={k}><div className="row between small"><b>{t(`lead.${k}`)}</b><span>{d.leads[k]}</span></div><Bar pct={(d.leads[k] / maxLead) * 100} spark={k === "won"} /></div>)}</div></Card>
         <Card><h3>{t("saas.over.trials")}</h3>
@@ -34,8 +35,10 @@ export default function SaasOverview() {
         <Card><h3>{t("saas.over.smslow")}</h3>
           {d.sms_low.length === 0 ? <p className="muted">{t("saas.over.none")}</p> : <ul className="list-dot" style={{ marginTop: 10 }}>{d.sms_low.map((x) => <li key={x.id}><span><Link href={`/app/saas/buildings/${x.id}`}><b>{x.name}</b></Link> <Chip tone="bad">{x.balance} SMS</Chip></span></li>)}</ul>}
         </Card>
+        {(d.cancel_requests?.length ?? 0) > 0 && <Card style={{ gridColumn: "1 / -1", borderColor: "var(--warn)" }}><h3>{t("cancel.over.title")}</h3>
+          <ul className="list-dot" style={{ marginTop: 10 }}>{d.cancel_requests!.map((x) => <li key={x.id}><span><Link href={`/app/saas/buildings/${x.org_id}`}><b>{x.org}</b></Link> <Chip tone="warn">{t("cancel.pending")}</Chip> <span className="muted small">{fdate(x.created_at)} · {x.reason}</span></span></li>)}</ul></Card>}
         <Card style={{ gridColumn: "1 / -1" }}><h3>{t("saas.over.recent")}</h3>
-          <ul className="list-dot" style={{ marginTop: 10 }}>{d.recent.map((x) => <li key={x.id}><span><Link href={`/app/saas/buildings/${x.id}`}><b>{x.name}</b></Link> · <span style={{ textTransform: "capitalize" }}>{x.plan}</span> <SubChip s={x.status} /> <span className="muted small">{fdate(x.created_at)}</span></span></li>)}</ul></Card>
+          <ul className="list-dot" style={{ marginTop: 10 }}>{d.recent.map((x) => <li key={x.id}><span><Link href={`/app/saas/buildings/${x.id}`}><b>{x.name}</b></Link> · <span>{keyLabel(t, x.plan)}</span> <SubChip s={x.status} /> <span className="muted small">{fdate(x.created_at)}</span></span></li>)}</ul></Card>
       </div>
     </>
   );

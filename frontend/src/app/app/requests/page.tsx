@@ -30,7 +30,7 @@ export default function Requests() {
   }, [page, q, status, cat, late]);
   useEffect(() => { load(); }, [load, prop?.id]);
   return (<>
-    <PageHead title={t("rq.title")} sub={t(triage ? "rq.sub_staff" : "rq.sub")} actions={<Btn onClick={() => setForm(true)}>{t("rq.new")}</Btn>} />
+    <PageHead helpKey="raise-request" title={t("rq.title")} sub={t(triage ? "rq.sub_staff" : "rq.sub")} actions={<Btn onClick={() => setForm(true)}>{t("rq.new")}</Btn>} />
     {triage && <div style={{ marginBottom: 14 }}><Tabs value={tab} onChange={setTab} items={[{ id: "list", label: t("rq.tab.list") }, { id: "sla", label: t("rq.tab.sla") }]} /></div>}
     {tab === "sla" && triage ? <SlaTab canEdit={slaEdit} onSaved={() => toast.show(t("rq.saved"))} /> : (<>
       {sum && <div className="grid g4" style={{ marginBottom: 16 }}>

@@ -7,6 +7,7 @@ memberships, which is how "flat owner + committee member" works.
 from datetime import datetime, timezone
 
 from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import false as sa_false, true as sa_true
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ..db import Base
@@ -36,6 +37,11 @@ class User(Base):
     saas_role: Mapped[str | None] = mapped_column(String(24), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    # Security (P2). token_version is bumped to invalidate every signed token at once (password change, role removal).
+    token_version: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    must_change_password: Mapped[bool] = mapped_column(Boolean, default=False, server_default=sa_false())
+    password_changed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    email_verified: Mapped[bool] = mapped_column(Boolean, default=True, server_default=sa_true())
     memberships: Mapped[list["Membership"]] = relationship(back_populates="user", cascade="all, delete-orphan")
 
 
@@ -91,3 +97,6 @@ class AuditLog(Base):
     entity_id: Mapped[str] = mapped_column(String(40), default="")
     meta: Mapped[dict] = mapped_column(JSON, default=dict)
     note: Mapped[str] = mapped_column(Text, default="")
+    # Tamper evidence (P2): row_hash = SHA-256 over this row and prev_hash, so editing or removing a row breaks the chain. See app/auditchain.py.
+    prev_hash: Mapped[str] = mapped_column(String(64), default="", server_default="")
+    row_hash: Mapped[str] = mapped_column(String(64), default="", server_default="")

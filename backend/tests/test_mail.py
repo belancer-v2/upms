@@ -295,5 +295,6 @@ def test_provider_selection(monkeypatch):
     assert M.get_provider().name == "sandbox"
     monkeypatch.setenv("MAIL_PROVIDER", "smtp")
     assert M.get_provider().name == "smtp"
-    with pytest.raises(NotImplementedError):
+    monkeypatch.delenv("MAIL_SMTP_HOST", raising=False)
+    with pytest.raises(RuntimeError):      # P3: SMTP is real now; with no MAIL_SMTP_HOST it refuses instead of pretending
         M.get_provider().send(M.Mail("a@b.co", "s", "h", "t"))

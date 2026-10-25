@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import { Logo } from "@/components/Logo";
 import { Toggles } from "@/components/Toggles";
 import { Btn, Field } from "@/components/ui";
-import { api } from "@/lib/api";
+import Link from "next/link";
+import { ApiError, api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useT } from "@/lib/i18n";
 import { ALL_SAAS } from "@/lib/nav";
@@ -20,7 +21,11 @@ export default function Login() {
 
   const go = async (e: string, p: string) => {
     setBusy(true); setErr("");
-    try { await login(e, p); router.push("/app"); } catch { setErr(t("auth.wrong")); } finally { setBusy(false); }
+    try { const r = await login(e, p); router.push(r.must_change_password ? "/change-password?first=1" : "/app"); }
+    catch (x) {
+      const a = x as ApiError;      // one neutral message for a wrong email or password; the lock and unconfirmed-email cases are different people's problems
+      setErr(a.status === 429 ? t("authx.locked") : a.code === "email_unverified" ? t("authx.unverified") : t("auth.wrong"));
+    } finally { setBusy(false); }
   };
   const groups = demo?.enabled ? [
     { title: t("auth.demo_saas"), rows: demo.accounts.filter((a) => a.roles.some((r) => ALL_SAAS.includes(r))) },
@@ -56,6 +61,7 @@ export default function Login() {
             <Field label={t("auth.password")}><input className="input" type="password" autoComplete="current-password" value={pw} onChange={(e) => setPw(e.target.value)} required /></Field>
             {err && <p className="error" role="alert">{err}</p>}
             <Btn type="submit" size="lg" disabled={busy} style={{ width: "100%" }}>{t("auth.signin")}</Btn>
+            <p style={{ marginTop: 12 }}><Link href="/forgot-password">{t("authx.forgot_link")}</Link></p>
           </form>
           {demo?.enabled && (
             <div style={{ marginTop: 30 }}>

@@ -50,7 +50,7 @@ export default function Credits() {
   const packName = (p: { name: string; name_bn: string }) => pick(p.name, p.name_bn || p.name);
   return (
     <>
-      <PageHead title={t("cr.title")} sub={t("cr.sub")} />
+      <PageHead helpKey="sms-email-credits" title={t("cr.title")} sub={t("cr.sub")} />
       {s.can_manage && lows.map((k) => <div key={k} role="alert" className="card" style={{ marginBottom: 12, borderColor: "var(--warn)", background: "var(--warn-bg)", color: "var(--warn)", fontWeight: 700 }}>
         {t("cr.alert", { k: t(`cr.${k}`), n: s[k].balance.toLocaleString("en-US"), t: s[k].threshold.toLocaleString("en-US") })}</div>)}
       <div className="grid g2" style={{ marginBottom: 18 }}>

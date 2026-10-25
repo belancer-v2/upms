@@ -49,7 +49,7 @@ function Recipients({ aud, onClose }: { aud: Aud; onClose: () => void }) {
   const p = usePaged<{ email: string; name: string; building: string; city: string; lang: string; suppressed: string }>(`${B}/audiences/${aud.id}/recipients`, {}, 10);
   return (
     <Modal title={aud.name} onClose={onClose}>
-      <div className="toolbar"><input className="input" placeholder={t("common.search")} value={p.q} onChange={(e) => p.setQ(e.target.value)} /></div>
+      <div className="toolbar"><input className="input" placeholder={t("common.search")} aria-label={t("common.search")} value={p.q} onChange={(e) => p.setQ(e.target.value)} /></div>
       <div className="table-wrap"><table className="t"><thead><tr><th>{t("auth.email")}</th><th>{t("common.name")}</th><th>{t("mail.aud.building")}</th><th>{t("mail.aud.lang")}</th></tr></thead>
         <tbody>{p.items.map((r) => <tr key={r.email}><td>{r.email}{r.suppressed && <> <Chip tone="warn">{t("mail.st.suppressed")}</Chip></>}</td><td>{r.name}</td><td>{r.building}</td><td>{r.lang.toUpperCase()}</td></tr>)}
           {!p.items.length && <tr><td colSpan={4}><Empty /></td></tr>}</tbody></table></div>
@@ -120,7 +120,7 @@ export function SuppressionTab({ admin }: { admin: boolean }) {
     <>
       <p className="muted small">{t("mail.sup.sub")}</p>
       <div className="toolbar"><input className="input" placeholder={t("common.search")} value={p.q} onChange={(e) => p.setQ(e.target.value)} aria-label={t("common.search")} />
-        <input className="input" type="email" placeholder={t("auth.email")} value={email} onChange={(e) => setEmail(e.target.value)} /><Btn onClick={add} disabled={email.length < 5}>{t("mail.sup.add")}</Btn></div>
+        <input className="input" type="email" placeholder={t("auth.email")} aria-label={t("auth.email")} value={email} onChange={(e) => setEmail(e.target.value)} /><Btn onClick={add} disabled={email.length < 5}>{t("mail.sup.add")}</Btn></div>
       <div className="table-wrap"><table className="t"><thead><tr><th>{t("auth.email")}</th><th>{t("mail.sup.reason")}</th><th>{t("mail.sup.source")}</th><th>{t("mail.updated")}</th><th /></tr></thead>
         <tbody>{p.items.map((s) => <tr key={s.id}><td>{s.email}</td><td><Chip tone={s.reason === "bounce" || s.reason === "complaint" ? "bad" : s.reason === "manual" ? "warn" : "mute"}>{t(`mail.sup.r.${s.reason}`)}</Chip></td><td className="small">{s.source}</td><td>{fdate(s.created_at)}</td>
           <td>{admin && <Btn size="sm" variant="ghost" onClick={() => del(s)}>{t("mail.sup.remove")}</Btn>}</td></tr>)}

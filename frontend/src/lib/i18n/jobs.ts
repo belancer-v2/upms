@@ -1,0 +1,28 @@
+export const jobsDict = {
+  en: {
+    "nav.saas.jobs": "Background jobs",
+    "jobs.title": "Background jobs", "jobs.sub": "Scheduled work: billing runs, reminders, campaigns, expiry, checks. Each job takes a lock, so it never runs twice at once.",
+    "jobs.name": "Job", "jobs.schedule": "Schedule", "jobs.last": "Last run", "jobs.status": "Status", "jobs.result": "Result", "jobs.run": "Run now", "jobs.running": "Running", "jobs.never": "Never run",
+    "jobs.failed_today": "{n} failed today", "jobs.history": "Run history", "jobs.alerts": "Alerts", "jobs.no_alerts": "No open alerts.", "jobs.resolve": "Mark resolved", "jobs.all": "All jobs",
+    "jobs.s.ok": "OK", "jobs.s.warn": "Needs a look", "jobs.s.failed": "Failed", "jobs.s.running": "Running", "jobs.s.skipped": "Skipped", "jobs.ran": "Finished: {s}", "jobs.locked": "Already running elsewhere.",
+    "jobs.error": "Error", "jobs.trigger.manual": "by hand", "jobs.trigger.schedule": "scheduled", "jobs.started": "Started", "jobs.open_alerts": "{n} open alerts",
+    "pay.ret.success": "Payment received", "pay.ret.success_sub": "Your payment is confirmed and recorded. The receipt is in the app.",
+    "pay.ret.fail": "Payment did not go through", "pay.ret.fail_sub": "No money was taken, or the provider declined it. You can try again from the invoice.",
+    "pay.ret.cancel": "Payment cancelled", "pay.ret.cancel_sub": "You cancelled the payment. Nothing was charged.",
+    "pay.ret.error": "We are still checking your payment", "pay.ret.error_sub": "If money left your account, it will be matched automatically within a day. Do not pay twice; contact the office if it does not show.",
+    "pay.ret.back": "Back to my invoices",
+  },
+  bn: {
+    "nav.saas.jobs": "ব্যাকগ্রাউন্ড কাজ",
+    "jobs.title": "ব্যাকগ্রাউন্ড কাজ", "jobs.sub": "নির্ধারিত কাজ: বিলিং, তাগিদ, ক্যাম্পেইন, মেয়াদ শেষ, যাচাই। প্রতিটি কাজ তালা নেয়, তাই একসাথে দুইবার চলে না।",
+    "jobs.name": "কাজ", "jobs.schedule": "সময়সূচি", "jobs.last": "শেষ চলা", "jobs.status": "অবস্থা", "jobs.result": "ফলাফল", "jobs.run": "এখনই চালান", "jobs.running": "চলছে", "jobs.never": "এখনো চলেনি",
+    "jobs.failed_today": "আজ {n}টি ব্যর্থ", "jobs.history": "চলার ইতিহাস", "jobs.alerts": "সতর্কতা", "jobs.no_alerts": "কোনো খোলা সতর্কতা নেই।", "jobs.resolve": "সমাধান হয়েছে", "jobs.all": "সব কাজ",
+    "jobs.s.ok": "ঠিক আছে", "jobs.s.warn": "দেখা দরকার", "jobs.s.failed": "ব্যর্থ", "jobs.s.running": "চলছে", "jobs.s.skipped": "বাদ", "jobs.ran": "শেষ: {s}", "jobs.locked": "অন্য জায়গায় চলছে।",
+    "jobs.error": "ত্রুটি", "jobs.trigger.manual": "হাতে", "jobs.trigger.schedule": "নির্ধারিত", "jobs.started": "শুরু", "jobs.open_alerts": "{n}টি খোলা সতর্কতা",
+    "pay.ret.success": "পেমেন্ট পাওয়া গেছে", "pay.ret.success_sub": "আপনার পেমেন্ট নিশ্চিত ও লেখা হয়েছে। রসিদ অ্যাপে আছে।",
+    "pay.ret.fail": "পেমেন্ট সম্পন্ন হয়নি", "pay.ret.fail_sub": "কোনো টাকা কাটা হয়নি, অথবা প্রদানকারী বাতিল করেছে। ইনভয়েস থেকে আবার চেষ্টা করুন।",
+    "pay.ret.cancel": "পেমেন্ট বাতিল", "pay.ret.cancel_sub": "আপনি পেমেন্ট বাতিল করেছেন। কিছু কাটা হয়নি।",
+    "pay.ret.error": "আপনার পেমেন্ট এখনো যাচাই হচ্ছে", "pay.ret.error_sub": "টাকা কাটা হয়ে থাকলে এক দিনের মধ্যে নিজে থেকে মিলে যাবে। দুইবার পরিশোধ করবেন না; না দেখালে অফিসে জানান।",
+    "pay.ret.back": "আমার ইনভয়েসে ফিরুন",
+  },
+};

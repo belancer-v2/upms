@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { type Inv } from "@/components/billbits";
 import { Btn, Modal } from "@/components/ui";
 import { api, money } from "@/lib/api";
+import { periodLabel } from "@/lib/act";
 import { useT } from "@/lib/i18n";
 
 export type GwOptions = { enabled: boolean; providers: string[]; fee_mode: string; fee_bps: number };
@@ -20,7 +21,7 @@ export function GatewayPay({ inv, opts, onClose }: { inv: Inv; opts: GwOptions; 
   const { t } = useT(); const [p, setP] = useState(opts.providers[0]); const [err, setErr] = useState(""); const [busy, setBusy] = useState(false);
   const fee = gwFee(inv.balance, opts.fee_bps); const payerPays = opts.fee_mode === "payer_pays" && fee > 0;
   const go = async () => { setBusy(true); try { const r = await api<{ redirect_url: string }>("/gateway/checkout", { body: { invoice_id: inv.id, provider: p } }); window.location.href = r.redirect_url; } catch (e: any) { setErr(e.message); setBusy(false); } };
-  return <Modal title={`${t("gw.pay_title")} · ${inv.unit} · ${inv.period}`} onClose={onClose}>
+  return <Modal title={`${t("gw.pay_title")} · ${inv.unit} · ${periodLabel(t, inv.period)}`} onClose={onClose}>
     <p className="hint">{t("gw.choose")}</p>
     <div className="stack" style={{ gap: 8, marginBottom: 12 }}>{opts.providers.map((k) => {
       const f = payerPays ? fee : 0;

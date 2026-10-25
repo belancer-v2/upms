@@ -1,7 +1,7 @@
 """Chart of accounts, append-only journal, expenses, vendors, fixed assets and budgets. Money is integer paisa."""
 from datetime import date, datetime
 
-from sqlalchemy import JSON, Boolean, Date, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy import BigInteger, Boolean, Date, DateTime, ForeignKey, Integer, JSON, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from ..db import Base
@@ -38,8 +38,8 @@ class JournalLine(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     journal_id: Mapped[int] = mapped_column(ForeignKey("journals.id"), index=True)
     account_id: Mapped[int] = mapped_column(ForeignKey("accounts.id"), index=True)
-    debit: Mapped[int] = mapped_column(Integer, default=0)
-    credit: Mapped[int] = mapped_column(Integer, default=0)
+    debit: Mapped[int] = mapped_column(BigInteger, default=0)
+    credit: Mapped[int] = mapped_column(BigInteger, default=0)
 
 
 class Vendor(Base):
@@ -59,7 +59,7 @@ class Expense(Base):
     category: Mapped[str] = mapped_column(String(12))        # utilities | repairs | salary | fuel | services | other
     vendor_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
     title: Mapped[str] = mapped_column(String(160))
-    amount: Mapped[int] = mapped_column(Integer)
+    amount: Mapped[int] = mapped_column(BigInteger)
     spent_on: Mapped[date] = mapped_column(Date, index=True)
     status: Mapped[str] = mapped_column(String(10), default="pending", index=True)   # pending | approved | rejected | paid
     needs_two: Mapped[bool] = mapped_column(Boolean, default=False)
@@ -78,7 +78,7 @@ class Asset(Base):
     name: Mapped[str] = mapped_column(String(120))
     name_bn: Mapped[str] = mapped_column(String(120), default="")
     category: Mapped[str] = mapped_column(String(20), default="equipment")
-    cost: Mapped[int] = mapped_column(Integer)
+    cost: Mapped[int] = mapped_column(BigInteger)
     bought_on: Mapped[date] = mapped_column(Date)
     life_years: Mapped[int] = mapped_column(Integer, default=10)
     capitalised: Mapped[bool] = mapped_column(Boolean, default=True)
@@ -93,4 +93,4 @@ class Budget(Base):
     property_id: Mapped[int] = mapped_column(ForeignKey("properties.id"), index=True)
     year: Mapped[int] = mapped_column(Integer)
     category: Mapped[str] = mapped_column(String(12))
-    amount: Mapped[int] = mapped_column(Integer)      # whole year, paisa
+    amount: Mapped[int] = mapped_column(BigInteger)      # whole year, paisa

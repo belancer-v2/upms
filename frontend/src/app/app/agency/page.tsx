@@ -18,7 +18,7 @@ type Roster = { start: string; end: string; days: string[]; posts: Post[]; shift
 type TabId = "roster" | "today" | "agencies" | "posts" | "attendance" | "bills";
 const STATUS_TONE: Record<string, "ok" | "warn" | "bad" | "info" | "mute"> = { planned: "mute", present: "ok", late: "warn", absent: "bad", leave: "info" };
 const addDays = (iso: string, n: number) => { const d = new Date(iso + "T00:00:00Z"); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
-const dayName = (iso: string, lang: string) => new Date(iso + "T00:00:00Z").toLocaleDateString(lang === "bn" ? "bn-BD" : "en-GB", { weekday: "short", day: "2-digit", month: "short", timeZone: "UTC" });
+const dayName = (iso: string, lang: string) => new Date(iso + "T00:00:00Z").toLocaleDateString("en-GB", { weekday: "short", day: "2-digit", month: "short", timeZone: "UTC" });
 
 export default function AgencyPage() {
   const { t } = useT(); const { prop, has } = useAuth();
@@ -30,7 +30,7 @@ export default function AgencyPage() {
     ...(bills ? [{ id: "bills" as TabId, label: t("ag.tab.bills") }] : [])];
   if (!prop) return null;
   return (<>
-    <PageHead title={t("ag.title")} sub={t("ag.sub")} />
+    <PageHead helpKey="agency-roster" title={t("ag.title")} sub={t("ag.sub")} />
     <div style={{ marginBottom: 16, overflowX: "auto" }}><Tabs value={tab} onChange={setTab} items={items} /></div>
     {tab === "roster" && <RosterTab />}
     {tab === "today" && <TodayTab />}
@@ -266,10 +266,11 @@ type Repl = { id: number; date: string; post: string; post_bn: string; shift: st
 const thisMonth = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`; };
 
 function AttendanceTab() {
-  const { t, pick } = useT(); const { prop } = useAuth(); const [period, setPeriod] = useState(thisMonth()); const [s, setS] = useState<Sum | null>(null); const [err, setErr] = useState("");
+  const { t, pick } = useT(); const { prop, has } = useAuth(); const canFulfil = has("PROPERTY_ADMIN", "AGENCY_MANAGER", "SECRETARY", "CARETAKER"); const [period, setPeriod] = useState(thisMonth()); const [s, setS] = useState<Sum | null>(null); const [err, setErr] = useState("");
   const [rep, setRep] = useState<{ items: Repl[]; total: number; page: number; size: number } | null>(null); const [page, setPage] = useState(1);
   useEffect(() => { if (/^\d{4}-\d{2}$/.test(period)) api<Sum>(`/agency/attendance/summary?period=${period}`).then((d) => { setS(d); setErr(""); }).catch((e) => setErr(e.message)); }, [period, prop?.id]);
-  useEffect(() => { api<any>(`/agency/replacements?page=${page}&size=10`).then(setRep).catch(() => {}); }, [page, prop?.id]);
+  const [ful, setFul] = useState<Repl | null>(null); const [tick, setTick] = useState(0);
+  useEffect(() => { api<any>(`/agency/replacements?page=${page}&size=10`).then(setRep).catch(() => {}); }, [page, prop?.id, tick]);
   return (<div className="stack">
     <div className="row wrap"><Field label={t("ag.att.month")}><input className="input" style={{ width: 150 }} value={period} onChange={(e) => setPeriod(e.target.value)} /></Field></div>
     {err && <p className="error">{err}</p>}
@@ -283,9 +284,24 @@ function AttendanceTab() {
         { key: "a", head: t("ag.att.absences"), num: true, render: (r) => r.absent }, { key: "v", head: t("ag.st.leave"), num: true, render: (r) => r.leave }]} /></>}
     {rep && rep.items.length > 0 && <Card><h3 style={{ margin: 0 }}>{t("ag.ask_replacement")}</h3>
       {rep.items.map((r) => <div key={r.id} className="row between wrap small" style={{ padding: "6px 0", borderTop: "1px solid var(--line)" }}><span>{fdate(r.date)} · {pick(r.post, r.post_bn || r.post)} · {pick(r.shift, r.shift_bn || r.shift)} · {pick(r.absent, r.absent_bn || r.absent)}</span>
-        <span><Chip tone={r.status === "fulfilled" ? "ok" : "warn"}>{r.status === "fulfilled" ? r.substitute : `SMS: ${r.sms_status}`}</Chip></span></div>)}
+        <span className="row" style={{ gap: 8 }}><Chip tone={r.status === "fulfilled" ? "ok" : "warn"}>{r.status === "fulfilled" ? r.substitute : `SMS: ${r.sms_status}`}</Chip>{canFulfil && r.status !== "fulfilled" && <Btn size="sm" variant="soft" onClick={() => setFul(r)}>{t("ag.fulfil")}</Btn>}</span></div>)}
       <Pager page={rep.page} size={rep.size} total={rep.total} onPage={setPage} /></Card>}
+    {ful && <FulfilModal req={ful} onClose={() => setFul(null)} onDone={() => { setFul(null); setPage(1); setTick((n) => n + 1); }} />}
   </div>);
+}
+
+/** Shortcut from the attendance list: record who covers an open replacement request without opening the roster cell. */
+function FulfilModal({ req, onDone, onClose }: { req: Repl; onDone: () => void; onClose: () => void }) {
+  const { t, pick } = useT(); const [name, setName] = useState(""); const [phone, setPhone] = useState(""); const [existing, setExisting] = useState(""); const [role, setRole] = useState("guard"); const [err, setErr] = useState("");
+  const [people, setPeople] = useState<{ id: number; name: string; name_bn: string }[]>([]);
+  useEffect(() => { api<{ staff: { id: number; name: string; name_bn: string; agency_id: number | null }[] }>("/agency/roster").then((r) => setPeople(r.staff.filter((p) => p.agency_id))).catch(() => {}); }, []);
+  const go = async () => { try { await api(`/agency/replacements/${req.id}/fulfil`, { body: existing ? { staff_id: +existing } : { new: { name, phone, role, emp_no: "" } } }); onDone(); } catch (e: any) { setErr(e.message); } };
+  return (<Modal title={t("ag.fulfil")} onClose={onClose}>
+    <p className="small muted">{fdate(req.date)} · {pick(req.post, req.post_bn || req.post)} · {pick(req.shift, req.shift_bn || req.shift)} · {pick(req.absent, req.absent_bn || req.absent)}</p>
+    <Field label={t("ag.sub_pick")}><select className="input" value={existing} onChange={(e) => setExisting(e.target.value)}><option value="" />{people.map((p) => <option key={p.id} value={p.id}>{pick(p.name, p.name_bn || p.name)}</option>)}</select></Field>
+    {!existing && <div className="grid g2"><Field label={t("ag.sub_name")}><input className="input" value={name} onChange={(e) => setName(e.target.value)} /></Field><Field label={t("ag.phone")}><input className="input" inputMode="tel" value={phone} onChange={(e) => setPhone(e.target.value)} /></Field>
+      <Field label={t("staff.role")}><select className="input" value={role} onChange={(e) => setRole(e.target.value)}><option value="guard">{t("staff.role.guard")}</option><option value="cleaner">{t("staff.role.cleaner")}</option></select></Field></div>}
+    {err && <p className="error" role="alert">{err}</p>}<div className="row"><Btn onClick={go} disabled={!existing && name.trim().length < 2}>{t("ag.fulfil")}</Btn><Btn variant="ghost" onClick={onClose}>{t("common.cancel")}</Btn></div></Modal>);
 }
 
 /* ---------------- bills */

@@ -13,7 +13,7 @@ export default function MyFlat() {
   useEffect(() => { load(); }, [load, prop?.id]);
   if (!units) return <p className="muted">{t("common.loading")}</p>;
   return (<>
-    <PageHead title={t("myflat.title")} sub={t("myflat.sub")} />
+    <PageHead helpKey="my-flat" title={t("myflat.title")} sub={t("myflat.sub")} />
     {units.length === 0 && <Card><p className="muted">{t("myflat.none")}</p></Card>}
     <div className="grid g2">{units.map((u) => (
       <Card key={u.id}><div className="row between"><h2>{u.number}</h2><StatusChip s={u.status} /></div>

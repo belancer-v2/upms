@@ -1,7 +1,7 @@
 """M19: SMS and email credits sold by FlatWise to buildings. Money is integer paisa. Balances are ledger sums, never edited."""
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String
+from sqlalchemy import BigInteger, Boolean, DateTime, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from ..db import Base
@@ -16,7 +16,7 @@ class CreditPack(Base):
     name: Mapped[str] = mapped_column(String(80))
     name_bn: Mapped[str] = mapped_column(String(80), default="")
     credits: Mapped[int] = mapped_column(Integer)
-    price: Mapped[int] = mapped_column(Integer)                    # paisa, before VAT
+    price: Mapped[int] = mapped_column(BigInteger)                    # paisa, before VAT
     active: Mapped[bool] = mapped_column(Boolean, default=True)
     sort: Mapped[int] = mapped_column(Integer, default=0)
 
@@ -46,16 +46,16 @@ class CreditPurchase(Base):
     pack_name: Mapped[str] = mapped_column(String(80), default="")
     pack_name_bn: Mapped[str] = mapped_column(String(80), default="")
     credits: Mapped[int] = mapped_column(Integer)
-    price: Mapped[int] = mapped_column(Integer)                    # paisa, before VAT (snapshot)
+    price: Mapped[int] = mapped_column(BigInteger)                    # paisa, before VAT (snapshot)
     vat_bps: Mapped[int] = mapped_column(Integer, default=0)
-    vat: Mapped[int] = mapped_column(Integer, default=0)
-    total: Mapped[int] = mapped_column(Integer)                    # what the buyer pays
+    vat: Mapped[int] = mapped_column(BigInteger, default=0)
+    total: Mapped[int] = mapped_column(BigInteger)                    # what the buyer pays
     mode: Mapped[str] = mapped_column(String(8), default="gateway")        # gateway | manual
     method: Mapped[str] = mapped_column(String(8))                 # bkash | nagad | card | bank
     status: Mapped[str] = mapped_column(String(10), default="created", index=True)   # created | pending | paid | failed | expired | rejected
     provider_ref: Mapped[str] = mapped_column(String(40), default="")
     trx_id: Mapped[str] = mapped_column(String(40), default="")
-    claimed_amount: Mapped[int | None] = mapped_column(Integer, nullable=True)   # manual: what the buyer says they sent
+    claimed_amount: Mapped[int | None] = mapped_column(BigInteger, nullable=True)   # manual: what the buyer says they sent
     invoice_id: Mapped[int | None] = mapped_column(ForeignKey("saas_invoices.id"), nullable=True, index=True)
     idem_key: Mapped[str] = mapped_column(String(60), unique=True)
     note: Mapped[str] = mapped_column(String(200), default="")

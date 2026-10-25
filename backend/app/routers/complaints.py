@@ -55,7 +55,7 @@ def _row(r: ServiceRequest, units: dict, users: dict) -> dict:
 
 
 def _users(db: Session) -> dict:
-    return {u.id: u.name for u in db.scalars(select(User))}
+    return dict(db.execute(select(User.id, User.name)).all())
 
 
 def _units(db: Session, ctx: Ctx) -> dict:

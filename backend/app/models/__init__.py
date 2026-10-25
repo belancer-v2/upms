@@ -1,6 +1,6 @@
 from .core import *  # noqa: F401,F403
 from .core import AuditLog, Membership, Organization, Property, User  # noqa: F401
-from .saas import BANDS, FeatureOverride, Lead, LeadNote, Plan, SaasInvoice, SmsLedger, Subscription, band_for  # noqa: F401,E402
+from .saas import BANDS, CancellationRequest, FeatureOverride, Lead, LeadNote, Plan, SaasInvoice, SmsLedger, Subscription, band_for  # noqa: F401,E402
 from .property import Occupancy, Unit  # noqa: F401,E402
 from .billing import ChargeRule, Invoice, InvoiceLine, Message, Payment  # noqa: F401,E402
 from .cash import CashEntry, Remittance  # noqa
@@ -19,4 +19,9 @@ from .credits import CreditPack, CreditPurchase, CreditSetting, EmailLedger, Pla
 from .agency import Agency, AgencyBill, AgencyDoc, AgencySetting, Post, Replacement, RosterSlot, ShiftDef, StaffPosting  # noqa
 from .visitors import FrequentVisitor, Visit, VisitorNotice, VisitorPass, VisitorSetting  # noqa
 from .saas_reports import LeadStageEvent, SaasCreditNote, SaasInvoiceDoc, SaasNumberSeq, SaasSettings, SubscriptionEvent  # noqa
+from .jobs import BuildingAutomation, JobLock, JobMark, JobRun, SmsDispatch, SystemAlert  # noqa
 from .mail import MailAudience, MailCampaign, MailConsent, MailOutbox, MailProspect, MailSetting, MailSuppression, MailTemplate  # noqa
+from .security import AuditHead, AuthSession, AuthToken, RateLimit  # noqa
+from .setup import DeletionRequest, SetupProgress  # noqa
+from .contracts import Contract, ContractDoc, ContractVisit  # noqa
+from . import indexes  # noqa  (keep last: composite indexes + foreign key index safety net)

@@ -213,7 +213,7 @@ def add_occupant(unit_id: int, body: OccIn, ctx: Ctx = Depends(property_ctx), db
         if db.scalar(select(User.id).where(User.email == occ.email)):
             raise HTTPException(409, "That email already has an account")
         temp = secrets.token_urlsafe(7)
-        usr = User(email=occ.email, name=body.name, name_bn=body.name_bn, phone=body.phone, password_hash=hash_password(temp))
+        usr = User(email=occ.email, name=body.name, name_bn=body.name_bn, phone=body.phone, password_hash=hash_password(temp), must_change_password=True)
         db.add(usr)
         db.flush()
         occ.user_id = usr.id
@@ -223,7 +223,7 @@ def add_occupant(unit_id: int, body: OccIn, ctx: Ctx = Depends(property_ctx), db
     sync_status(db, u)
     audit(db, user_id=ctx.user.id, org_id=ctx.property.org_id, property_id=ctx.property.id, action=f"occupant.add.{body.kind}", entity="unit", entity_id=u.id, meta={"name": body.name})
     db.commit()
-    return {"unit": unit_dict(db, u, True), "temp_password": temp}
+    return {"unit": unit_dict(db, u, True), "temp_password": temp, "occupant_id": occ.id}
 
 
 @router.post("/occupants/{occ_id}/move-out")
@@ -241,6 +241,8 @@ def move_out(occ_id: int, ctx: Ctx = Depends(property_ctx), db: Session = Depend
     if o.user_id:  # the login stops working for this building
         for m in db.scalars(select(Membership).where(Membership.user_id == o.user_id, Membership.unit_id == u.id)):
             db.delete(m)
+        from ..services.sessions import revoke_all
+        revoke_all(db, o.user_id, "role_removed")  # signed-in devices of the person who moved out stop working now
     sync_status(db, u)
     audit(db, user_id=ctx.user.id, org_id=ctx.property.org_id, property_id=ctx.property.id, action="occupant.move_out", entity="unit", entity_id=u.id, meta={"name": o.name, "kind": o.kind})
     db.commit()

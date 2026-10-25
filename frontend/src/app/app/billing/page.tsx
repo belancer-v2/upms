@@ -3,10 +3,12 @@ import { useCallback, useEffect, useState } from "react";
 import { BillChip, stColor, type Inv, type Pay } from "@/components/billbits";
 import { PayForm } from "@/components/PayForm";
 import { GatewayCard } from "@/components/GatewayCard";
+import { ExportButton } from "@/components/ExportButton";
 import { UnitMap, type Unit } from "@/components/UnitParts";
 import { Bar, Btn, Card, Chip, DataTable, Empty, Field, Modal, PageHead, Stat, Tabs, useToast } from "@/components/ui";
 import { api, fdate, money } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { periodLabel } from "@/lib/act";
 import { useT } from "@/lib/i18n";
 
 type Agg = { period: string; billed: number; collected: number; outstanding: number; pct: number; invoices: number; paid: number };
@@ -40,8 +42,9 @@ export default function Billing() {
   const maxBilled = Math.max(1, ...sum.trend.map((x) => x.billed));
 
   return (<>
-    <PageHead title={t("bill.title")} sub={t("bill.sub")} actions={<>
+    <PageHead helpKey="run-invoices" title={t("bill.title")} sub={t("bill.sub")} actions={<>
       <select className="input" style={{ width: "auto" }} value={p} onChange={(e) => setPeriod(e.target.value)} aria-label={t("bill.period")}>{sum.periods.map((x) => <option key={x}>{x}</option>)}</select>
+      {(tab === "invoices" || tab === "payments" || tab === "dues") && <ExportButton name={tab} />}
       {money_roles && <Btn onClick={() => setGen(true)}>{t("bill.generate")}</Btn>}</>} />
     <div style={{ marginBottom: 16 }}><Tabs value={tab} onChange={setTab} items={[{ id: "overview", label: t("bill.tab.overview") }, { id: "invoices", label: t("bill.tab.invoices") }, { id: "payments", label: `${t("bill.tab.payments")}${pending.length ? ` · ${pending.length}` : ""}` }, { id: "dues", label: t("bill.tab.dues") }, { id: "rules", label: t("bill.tab.rules") }]} /></div>
 
@@ -72,13 +75,13 @@ export default function Billing() {
     </div>)}
 
     {tab === "invoices" && <DataTable rows={invs} pageSize={12} search={(r) => `${r.unit} ${r.number}`} cols={[
-      { key: "unit", head: t("bill.flat"), render: (r) => <b>{r.unit}</b> }, { key: "period", head: t("bill.period") }, { key: "due", head: t("bill.due"), render: (r) => <span className="nowrap">{fdate(r.due_date)}</span> },
+      { key: "unit", head: t("bill.flat"), render: (r) => <b>{r.unit}</b> }, { key: "period", head: t("bill.period"), render: (r) => periodLabel(t, r.period) }, { key: "due", head: t("bill.due"), render: (r) => <span className="nowrap">{fdate(r.due_date)}</span> },
       { key: "total", head: t("bill.total"), num: true, render: (r) => money(r.total) }, { key: "paid", head: t("bill.paid"), num: true, render: (r) => money(r.paid) },
       { key: "st", head: t("common.status"), render: (r) => <BillChip s={r.status} /> },
       { key: "act", head: "", render: (r) => money_roles && r.status !== "paid" && r.status !== "void" ? <Btn size="sm" variant="soft" onClick={() => setRec(r)}>{t("bill.record")}</Btn> : null }]} />}
 
     {tab === "payments" && <DataTable rows={pays} pageSize={12} search={(r) => `${r.unit} ${r.trx_id} ${r.receipt_no}`} cols={[
-      { key: "unit", head: t("bill.flat"), render: (r) => <b>{r.unit}</b> }, { key: "period", head: t("bill.period") }, { key: "amt", head: t("common.amount"), num: true, render: (r) => money(r.amount) },
+      { key: "unit", head: t("bill.flat"), render: (r) => <b>{r.unit}</b> }, { key: "period", head: t("bill.period"), render: (r) => periodLabel(t, r.period ?? "") }, { key: "amt", head: t("common.amount"), num: true, render: (r) => money(r.amount) },
       { key: "m", head: t("bill.method"), render: (r) => <>{t(`bill.m.${r.method}`)}{r.trx_id && <span className="muted small"> · {r.trx_id}</span>}</> },
       { key: "d", head: t("common.date"), render: (r) => <span className="nowrap">{fdate(r.paid_on)}</span> }, { key: "st", head: t("common.status"), render: (r) => <BillChip s={r.status} /> },
       { key: "act", head: "", render: (r) => r.status === "pending" && money_roles ? <div className="row"><Btn size="sm" onClick={() => decide(r.id, "verify")}>{t("bill.verify")}</Btn><Btn size="sm" variant="outline" onClick={() => decide(r.id, "reject")}>{t("bill.reject")}</Btn></div>

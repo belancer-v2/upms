@@ -10,3 +10,8 @@ __pycache__/
 frontend/next-env.d.ts
 .DS_Store
 backend/uploads/
+.next-*/
+
+# build and backup output
+dist/
+backups/

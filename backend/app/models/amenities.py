@@ -1,7 +1,7 @@
 """M16: amenities (community hall first), their prices and rules, blackout dates, bookings and the slot holds that make double booking impossible."""
 from datetime import date, datetime
 
-from sqlalchemy import JSON, Boolean, Date, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy import BigInteger, Boolean, Date, DateTime, ForeignKey, Integer, JSON, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from ..db import Base
@@ -22,11 +22,11 @@ class Amenity(Base):
     active: Mapped[bool] = mapped_column(Boolean, default=True)
     # {"morning": {"on": true, "owner": paisa, "tenant": paisa}, "evening": ..., "night": ..., "full": ...}
     slots: Mapped[dict] = mapped_column(JSON, default=dict)
-    ext_hour_fee: Mapped[int] = mapped_column(Integer, default=0)           # paisa per extra hour, 0 = no extension offered
+    ext_hour_fee: Mapped[int] = mapped_column(BigInteger, default=0)           # paisa per extra hour, 0 = no extension offered
     max_ext_hours: Mapped[int] = mapped_column(Integer, default=2)
-    deposit: Mapped[int] = mapped_column(Integer, default=0)                # refundable security deposit
-    cleaning_fee: Mapped[int] = mapped_column(Integer, default=0)
-    generator_fee: Mapped[int] = mapped_column(Integer, default=0)          # optional, chosen by the resident
+    deposit: Mapped[int] = mapped_column(BigInteger, default=0)                # refundable security deposit
+    cleaning_fee: Mapped[int] = mapped_column(BigInteger, default=0)
+    generator_fee: Mapped[int] = mapped_column(BigInteger, default=0)          # optional, chosen by the resident
     free_quota: Mapped[int] = mapped_column(Integer, default=0)             # free bookings per flat per year
     min_notice_days: Mapped[int] = mapped_column(Integer, default=3)
     max_advance_days: Mapped[int] = mapped_column(Integer, default=90)
@@ -55,7 +55,7 @@ class Booking(Base):
     party: Mapped[str] = mapped_column(String(8), default="owner")          # owner | tenant: decides which fee applies
     on_date: Mapped[date] = mapped_column(Date, index=True)
     slot: Mapped[str] = mapped_column(String(8))                            # morning | evening | night | full
-    purpose: Mapped[str] = mapped_column(String(12), default="other")
+    purpose: Mapped[str] = mapped_column(String(24), default="other")
     guests: Mapped[int] = mapped_column(Integer, default=0)
     catering: Mapped[bool] = mapped_column(Boolean, default=False)
     contact: Mapped[str] = mapped_column(String(32), default="")
@@ -69,21 +69,21 @@ class Booking(Base):
     decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     invoice_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
-    fee: Mapped[int] = mapped_column(Integer, default=0)                    # all in paisa, fixed when approved
-    ext_fee: Mapped[int] = mapped_column(Integer, default=0)
-    cleaning: Mapped[int] = mapped_column(Integer, default=0)
-    generator: Mapped[int] = mapped_column(Integer, default=0)
-    deposit: Mapped[int] = mapped_column(Integer, default=0)
-    total: Mapped[int] = mapped_column(Integer, default=0)
+    fee: Mapped[int] = mapped_column(BigInteger, default=0)                    # all in paisa, fixed when approved
+    ext_fee: Mapped[int] = mapped_column(BigInteger, default=0)
+    cleaning: Mapped[int] = mapped_column(BigInteger, default=0)
+    generator: Mapped[int] = mapped_column(BigInteger, default=0)
+    deposit: Mapped[int] = mapped_column(BigInteger, default=0)
+    total: Mapped[int] = mapped_column(BigInteger, default=0)
     free_used: Mapped[bool] = mapped_column(Boolean, default=False)         # the yearly free quota paid the slot fee
     confirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     # handover after the event
-    damage_amount: Mapped[int] = mapped_column(Integer, default=0)
+    damage_amount: Mapped[int] = mapped_column(BigInteger, default=0)
     damage_note: Mapped[str] = mapped_column(String(300), default="")
     handover_by: Mapped[int | None] = mapped_column(Integer, nullable=True)
     handover_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     # money going back to the resident (deposit release or cancellation refund); recorded, not posted to the ledger
-    refund_amount: Mapped[int] = mapped_column(Integer, default=0)
+    refund_amount: Mapped[int] = mapped_column(BigInteger, default=0)
     refund_method: Mapped[str] = mapped_column(String(8), default="")
     refunded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)

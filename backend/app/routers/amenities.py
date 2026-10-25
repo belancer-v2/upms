@@ -267,14 +267,15 @@ def quote(amenity_id: int, on_date: date, slot: str, ext_hours: int = 0, generat
 
 
 # ---------------- expiry
-def expire_stale(db: Session, pid: int) -> int:
-    """Unpaid approvals older than the hold period, and requests whose day has passed, free their slot."""
-    n, t = 0, now()
+def expire_stale(db: Session, pid: int, at=None) -> int:
+    """Unpaid approvals older than the hold period, and requests whose day has passed, free their slot. `at` lets the scheduled job and tests inject the time."""
+    n, t = 0, at or now()
+    today = at.date() if at else date.today()
     for b in db.scalars(select(Booking).where(Booking.property_id == pid, Booking.status.in_(("pending", "approved")))):
         inv = db.get(Invoice, b.invoice_id) if b.invoice_id else None
         if b.status == "approved" and b.expires_at and _aware(b.expires_at) < t and not (inv and inv.paid > 0):
             pass
-        elif b.status == "pending" and b.on_date < date.today():
+        elif b.status == "pending" and b.on_date < today:
             pass
         else:
             continue

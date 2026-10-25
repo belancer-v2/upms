@@ -20,5 +20,5 @@ export default function Roles() {
       </div>
     </>
   );
-  return (<><PageHead title={t("roles.title")} sub={t("roles.sub")} />{block(t("roles.saas"), SAAS_LIST)}{block(t("roles.customer"), CUSTOMER_LIST)}</>);
+  return (<><PageHead helpKey="roles-access" title={t("roles.title")} sub={t("roles.sub")} />{block(t("roles.saas"), SAAS_LIST)}{block(t("roles.customer"), CUSTOMER_LIST)}</>);
 }

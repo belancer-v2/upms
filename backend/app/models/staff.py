@@ -1,7 +1,7 @@
 """Building staff (caretaker, guards, cleaners), the NID vault, and monthly salary sheets."""
 from datetime import date, datetime
 
-from sqlalchemy import Date, DateTime, ForeignKey, Integer, String, UniqueConstraint
+from sqlalchemy import BigInteger, Date, DateTime, ForeignKey, Integer, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from ..db import Base
@@ -17,7 +17,7 @@ class Staff(Base):
     role: Mapped[str] = mapped_column(String(12), default="other")   # caretaker | guard | cleaner | driver | other
     phone: Mapped[str] = mapped_column(String(32), default="")
     joined: Mapped[date] = mapped_column(Date)
-    salary: Mapped[int] = mapped_column(Integer)                      # monthly, paisa
+    salary: Mapped[int] = mapped_column(BigInteger)                      # monthly, paisa
     status: Mapped[str] = mapped_column(String(8), default="active")  # active | left
     nid_enc: Mapped[str] = mapped_column(String(300), default="")     # encrypted NID number
     nid_last4: Mapped[str] = mapped_column(String(4), default="")
@@ -52,8 +52,8 @@ class SalaryLine(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     sheet_id: Mapped[int] = mapped_column(ForeignKey("salary_sheets.id"), index=True)
     staff_id: Mapped[int] = mapped_column(Integer, index=True)
-    base: Mapped[int] = mapped_column(Integer)
-    bonus: Mapped[int] = mapped_column(Integer, default=0)
-    deduction: Mapped[int] = mapped_column(Integer, default=0)
+    base: Mapped[int] = mapped_column(BigInteger)
+    bonus: Mapped[int] = mapped_column(BigInteger, default=0)
+    deduction: Mapped[int] = mapped_column(BigInteger, default=0)
     bonus_kind: Mapped[str] = mapped_column(String(8), default="")    # eid | other
     note: Mapped[str] = mapped_column(String(120), default="")

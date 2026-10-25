@@ -18,7 +18,7 @@ export default function Invoices() {
   const doPay = async () => { if (!pay) return; await api(`/saas/invoices/${pay.id}/pay`, { body: { method: m, trx_id: trx } }); setPay(null); setTrx(""); load(); };
   return (
     <>
-      <PageHead title={t("saas.inv.title")} sub={t("saas.inv.sub")} actions={<><input className="input" style={{ width: 150 }} type="month" value={period} onChange={(e) => setPeriod(e.target.value)} aria-label={t("saas.inv.period")} /><Btn onClick={run}>{t("saas.inv.run")}</Btn></>} />
+      <PageHead helpKey="saas-invoices" title={t("saas.inv.title")} sub={t("saas.inv.sub")} actions={<><input className="input" style={{ width: 150 }} type="month" value={period} onChange={(e) => setPeriod(e.target.value)} aria-label={t("saas.inv.period")} /><Btn onClick={run}>{t("saas.inv.run")}</Btn></>} />
       <div style={{ marginBottom: 16 }}><Tabs value={f} onChange={setF} items={[{ id: "all", label: `${t("common.all")} · ${rows.length}` }, ...["issued", "overdue", "paid"].map((s) => ({ id: s, label: `${t(`inv.${s}`)} · ${rows.filter((r) => r.status === s).length}` }))]} /></div>
       <DataTable rows={view} search={(r) => `${r.number} ${r.org}`} cols={[
         { key: "number", head: t("saas.inv.number"), render: (r) => <a href={`/app/saas/invoice/${r.id}`}><b>{r.number}</b></a> },
@@ -31,7 +31,7 @@ export default function Invoices() {
       ]} />
       {pay && <Modal title={`${t("saas.inv.pay")} · ${pay.number}`} onClose={() => setPay(null)}>
         <p className="muted">{pay.org} · <b>{money(pay.amount)}</b></p>
-        <Field label={t("saas.inv.method")}><select className="input" value={m} onChange={(e) => setM(e.target.value)}><option value="bkash">bKash</option><option value="nagad">Nagad</option><option value="bank">Bank</option><option value="cash">Cash</option></select></Field>
+        <Field label={t("saas.inv.method")}><select className="input" value={m} onChange={(e) => setM(e.target.value)}><option value="bkash">bKash</option><option value="nagad">Nagad</option><option value="bank">{t("fin.method.bank")}</option><option value="cash">{t("fin.method.cash")}</option></select></Field>
         <Field label={t("saas.inv.trx")}><input className="input" value={trx} onChange={(e) => setTrx(e.target.value)} /></Field>
         <div className="row"><Btn onClick={doPay}>{t("saas.inv.pay")}</Btn><Btn variant="ghost" onClick={() => setPay(null)}>{t("common.cancel")}</Btn></div></Modal>}
       {toast.node}

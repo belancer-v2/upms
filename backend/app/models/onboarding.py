@@ -1,7 +1,7 @@
 """Tenant onboarding: a case per new tenant, their documents, and the DMP (police) pack."""
 from datetime import date, datetime
 
-from sqlalchemy import JSON, Date, DateTime, ForeignKey, Integer, String
+from sqlalchemy import BigInteger, Date, DateTime, ForeignKey, Integer, JSON, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from ..db import Base
@@ -19,8 +19,8 @@ class TenantCase(Base):
     status: Mapped[str] = mapped_column(String(10), default="invited", index=True)
     name: Mapped[str] = mapped_column(String(120))
     phone: Mapped[str] = mapped_column(String(32))
-    rent: Mapped[int] = mapped_column(Integer, default=0)          # monthly, paisa
-    advance: Mapped[int] = mapped_column(Integer, default=0)       # paisa
+    rent: Mapped[int] = mapped_column(BigInteger, default=0)          # monthly, paisa
+    advance: Mapped[int] = mapped_column(BigInteger, default=0)       # paisa
     start_date: Mapped[date] = mapped_column(Date)
     lease_months: Mapped[int] = mapped_column(Integer, default=12)
     details: Mapped[dict] = mapped_column(JSON, default=dict)

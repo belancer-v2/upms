@@ -11,7 +11,9 @@ from sqlalchemy.orm import Session
 
 from .. import config
 from ..audit import audit
+from ..services.uploads import safe_filename
 from ..db import get_db
+from ..services.storage import get_storage
 from ..deps import Ctx, property_ctx
 from ..models.agency import Agency, AgencyBill, AgencyDoc, AgencySetting, Post, Replacement, RosterSlot, ShiftDef, StaffPosting
 from ..models.billing import Message
@@ -183,11 +185,9 @@ async def upload_doc(aid: int, kind: str = Form(..., pattern=DOC_KINDS), file: U
         raise HTTPException(422, "The file is empty")
     if not data.startswith(spec[1]):
         raise HTTPException(422, "The file does not look like its type")
-    folder = config.UPLOAD_DIR / "agencies" / str(a.id)
-    folder.mkdir(parents=True, exist_ok=True)
     stored = f"{secrets.token_hex(10)}.{spec[0]}"
-    (folder / stored).write_bytes(data)
-    d = AgencyDoc(agency_id=a.id, kind=kind, filename=(file.filename or f"{kind}.{spec[0]}")[:160], stored=stored, content_type=file.content_type, size=len(data), uploaded_by=ctx.user.id)
+    get_storage().put(f"agencies/{a.id}/{stored}", data, file.content_type or "")
+    d = AgencyDoc(agency_id=a.id, kind=kind, filename=safe_filename(file.filename, f"{kind}.{spec[0]}"), stored=stored, content_type=file.content_type, size=len(data), uploaded_by=ctx.user.id)
     db.add(d)
     db.flush()
     _log(db, ctx, "agency.doc.add", "agency", a.id, {"kind": kind})
@@ -208,10 +208,10 @@ def get_doc(aid: int, did: int, ctx: Ctx = Depends(property_ctx), db: Session = 
     _gate(ctx)
     ctx.need(*MONEY_SEE)
     a, d = _own_doc(db, ctx, aid, did)
-    path = config.UPLOAD_DIR / "agencies" / str(a.id) / d.stored
-    if not path.exists():
+    key = f"agencies/{a.id}/{d.stored}"
+    if not get_storage().exists(key):
         raise HTTPException(404, "Not found")
-    return FileResponse(path, media_type=d.content_type, filename=d.filename, headers={"X-Content-Type-Options": "nosniff"})
+    return get_storage().serve(key, d.content_type, d.filename, headers={"X-Content-Type-Options": "nosniff"})
 
 
 @router.delete("/agencies/{aid}/docs/{did}", status_code=204)
@@ -219,7 +219,7 @@ def delete_doc(aid: int, did: int, ctx: Ctx = Depends(property_ctx), db: Session
     _gate(ctx)
     ctx.need(*AGENCY_EDIT)
     a, d = _own_doc(db, ctx, aid, did)
-    (config.UPLOAD_DIR / "agencies" / str(a.id) / d.stored).unlink(missing_ok=True)
+    get_storage().delete(f"agencies/{a.id}/{d.stored}")
     db.delete(d)
     _log(db, ctx, "agency.doc.delete", "agency", a.id, {"kind": d.kind})
     db.commit()

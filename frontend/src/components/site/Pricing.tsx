@@ -8,7 +8,7 @@ import { useT } from "@/lib/i18n";
 export type PlanData = { key: string; name: string; name_bn: string; monthly: Record<string, number>; setup: Record<string, number>; sms_included: Record<string, number>; features: string[] };
 export type PlansResp = { bands: { key: string; label: string; max: number | null }[]; trial_days: number; yearly_months_paid: number; sms_pack: { count: number; price: number }; plans: PlanData[] };
 export const FEATURE_ORDER = ["billing", "expenses", "notices", "resident_web", "reports", "staff", "assets", "tenant_dmp", "reminders", "caretaker_app", "cash_confirm", "policies", "resident_portal", "visitor", "amenities", "parking", "maintenance", "cash_otp", "priority_support"];
-export const SOON = new Set(["resident_portal", "maintenance"]);
+export const SOON = new Set(["resident_portal"]);
 
 export function usePlans() {
   const [d, setD] = useState<PlansResp | null>(null);
@@ -63,7 +63,7 @@ export function CompareTable() {
       <thead><tr><th>{t("site.price.feature")}</th>{d.plans.map((p) => <th key={p.key} className="center">{pick(p.name, p.name_bn)}</th>)}</tr></thead>
       <tbody>{FEATURE_ORDER.map((f) => (
         <tr key={f}><td>{t(`feat.${f}`)}{SOON.has(f) && <span className="chip mute" style={{ marginLeft: 8 }}>{t("site.price.soon")}</span>}</td>
-          {d.plans.map((p) => <td key={p.key} className="center">{p.features.includes(f) ? <span className="tick" aria-label="yes">✓</span> : <span className="dash" aria-label="no">–</span>}</td>)}</tr>
+          {d.plans.map((p) => <td key={p.key} className="center">{p.features.includes(f) ? <span className="tick" aria-label={t("common.yes")}>✓</span> : <span className="dash" aria-label={t("common.no")}>–</span>}</td>)}</tr>
       ))}</tbody>
     </table></div>
   );

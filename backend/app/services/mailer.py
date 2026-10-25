@@ -241,6 +241,7 @@ class Mail:
     subject: str
     html: str
     text: str
+    unsubscribe_url: str = ""
 
 
 class EmailProvider(ABC):
@@ -271,18 +272,36 @@ class SandboxProvider(EmailProvider):
 
 
 class SmtpProvider(EmailProvider):
-    """STUB. To go live: set MAIL_PROVIDER=smtp and MAIL_SMTP_HOST, MAIL_SMTP_PORT, MAIL_SMTP_USER, MAIL_SMTP_PASSWORD, MAIL_FROM.
-    Implement send() with smtplib (STARTTLS), add the List-Unsubscribe and List-Unsubscribe-Post headers, and feed bounce/open/click
-    webhooks back into mail_outbox. Until then it refuses to send rather than pretend."""
+    """Real SMTP (services/mail_transport.py). MAIL_PROVIDER=smtp plus MAIL_SMTP_HOST/PORT/USER/PASSWORD/SECURITY and MAIL_FROM. Adds List-Unsubscribe headers."""
     name = "smtp"
+    transport_factory = None   # tests inject a fake SMTP class here
+
+    def _headers(self, mail: Mail) -> dict:
+        h = {"X-Auto-Response-Suppress": "OOF, AutoReply"}
+        if mail.unsubscribe_url:
+            h["List-Unsubscribe"] = f"<{mail.unsubscribe_url}>"
+            h["List-Unsubscribe-Post"] = "List-Unsubscribe=One-Click"
+        return h
 
     def send(self, mail: Mail) -> str:
-        raise NotImplementedError("SMTP provider is not wired yet. See SmtpProvider in services/mailer.py.")
+        from . import mail_transport as T
+        try:
+            cfg = T.settings(self.name)
+            msg = T.build_message(mail.to, mail.subject, mail.html, mail.text, self._headers(mail))
+            return T.smtp_send(msg, factory=self.transport_factory, **cfg)
+        except T.MailError as e:
+            raise RuntimeError(str(e)) from None
 
 
 class SesProvider(SmtpProvider):
-    """STUB for Amazon SES (MAIL_PROVIDER=ses). Use boto3 sesv2 send_email and SNS notifications for bounces and complaints."""
+    """Amazon SES through its SMTP interface (MAIL_PROVIDER=ses, SES_REGION, SES SMTP credentials). Bounces and complaints arrive on POST /api/webhooks/ses (SNS)."""
     name = "ses"
+
+    def _headers(self, mail: Mail) -> dict:
+        h = super()._headers(mail)
+        if os.getenv("SES_CONFIGURATION_SET"):
+            h["X-SES-CONFIGURATION-SET"] = os.environ["SES_CONFIGURATION_SET"]
+        return h
 
 
 def get_provider() -> EmailProvider:
@@ -455,7 +474,7 @@ def _deliver(db: Session, row: MailOutbox, tpl: MailTemplate, at: datetime, simu
     rendered = render_email(subject, blocks, row.vars or {}, lang, tpl.kind, row.to_email, row.id)
     row.subject, row.html, row.text = rendered.subject, rendered.html, rendered.text
     try:
-        prov.send(Mail(row.to_email, rendered.subject, rendered.html, rendered.text))
+        prov.send(Mail(row.to_email, rendered.subject, rendered.html, rendered.text, f"{APP_URL}/unsubscribe/{unsubscribe_token(row.to_email, row.id)}"))
     except Exception as e:  # real providers can fail; record it, do not crash the run
         row.status, row.reason = "failed", str(e)[:60]
         return

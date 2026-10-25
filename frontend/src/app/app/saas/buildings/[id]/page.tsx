@@ -1,7 +1,7 @@
 "use client";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
-import { Btn, Card, Chip, Field, PageHead, useToast } from "@/components/ui";
+import { Btn, Card, Chip, Field, Modal, PageHead, useToast } from "@/components/ui";
 import { InvChip, SubChip, daysLeft } from "@/components/saasbits";
 import { api, fdate, ftime, money } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -9,11 +9,11 @@ import { useT } from "@/lib/i18n";
 
 type Feat = { key: string; plan: boolean; override: boolean | null; on: boolean };
 type Detail = { id: number; name: string; name_bn: string; city: string; status: string; sub_status: string; plan: string; band: string; cycle: string; flats: number; discount_pct: number; trial_ends: string | null; mrr: number; sms_balance: number; users: number;
-  buildings: { id: number; name: string; city: string; floors: number }[]; contacts: { name: string; email: string; role: string }[]; features: Feat[]; invoices: any[]; sms_ledger: { id: number; delta: number; reason: string; at: string }[] };
+  buildings: { id: number; name: string; city: string; floors: number }[]; contacts: { name: string; email: string; role: string }[]; features: Feat[]; cancellation: { id: number; status: string; reason: string; requested_by: string; created_at: string; decided_at: string | null; decision_note: string } | null; invoices: any[]; sms_ledger: { id: number; delta: number; reason: string; at: string }[] };
 
 export default function BuildingDetail() {
   const { id } = useParams<{ id: string }>(); const { t, pick } = useT(); const { saas } = useAuth(); const toast = useToast();
-  const [d, setD] = useState<Detail | null>(null); const [plan, setPlan] = useState({ plan: "standard", band: "M", cycle: "monthly", discount_pct: 0 }); const [sms, setSms] = useState(1000);
+  const [d, setD] = useState<Detail | null>(null); const [plan, setPlan] = useState({ plan: "standard", band: "M", cycle: "monthly", discount_pct: 0 }); const [sms, setSms] = useState(1000); const [ending, setEnding] = useState<null | "end" | "approve" | "reject">(null); const [why, setWhy] = useState("");
   const load = useCallback(async () => { const x = await api<Detail>(`/saas/orgs/${id}`); setD(x); setPlan({ plan: x.plan, band: x.band, cycle: x.cycle, discount_pct: x.discount_pct }); }, [id]);
   useEffect(() => { load(); }, [load]);
   if (!d) return <p className="muted">{t("common.loading")}</p>;
@@ -21,16 +21,20 @@ export default function BuildingDetail() {
   const admin = saas("SUPER_ADMIN", "SAAS_ADMIN"); const lead = saas("SUPER_ADMIN", "SAAS_ADMIN", "SAAS_SALES"); const money_ok = saas("SUPER_ADMIN", "SAAS_ADMIN", "SAAS_FINANCE");
   return (
     <>
-      <PageHead eyebrow={t("saas.b.title")} title={pick(d.name, d.name_bn)} sub={`${d.city} · ${d.flats} ${t("saas.b.flats").toLowerCase()} · ${d.users} ${t("saas.b.users").toLowerCase()}`}
+      <PageHead helpKey="saas-overview" eyebrow={t("saas.b.title")} title={pick(d.name, d.name_bn)} sub={`${d.city} · ${d.flats} ${t("saas.b.flats").toLowerCase()} · ${d.users} ${t("saas.b.users").toLowerCase()}`}
         actions={<><SubChip s={d.sub_status} />
           {admin && d.sub_status !== "active" && d.sub_status !== "suspended" && <Btn onClick={() => act(() => api(`/saas/orgs/${id}/status`, { body: { status: "active" } }))}>{t("saas.d.activate")}</Btn>}
           {admin && d.sub_status === "suspended" && <Btn onClick={() => act(() => api(`/saas/orgs/${id}/status`, { body: { status: "active" } }))}>{t("saas.d.activate")}</Btn>}
-          {admin && d.sub_status !== "suspended" && <Btn variant="danger" onClick={() => act(() => api(`/saas/orgs/${id}/status`, { body: { status: "suspended" } }))}>{t("saas.d.suspend")}</Btn>}</>} />
+          {admin && d.sub_status !== "cancelled" && <Btn variant="outline" onClick={() => { setWhy(""); setEnding("end"); }}>{t("cancel.end")}</Btn>}
+          {admin && d.sub_status !== "suspended" && d.sub_status !== "cancelled" && <Btn variant="danger" onClick={() => act(() => api(`/saas/orgs/${id}/status`, { body: { status: "suspended" } }))}>{t("saas.d.suspend")}</Btn>}</>} />
+      {d.cancellation?.status === "pending" && <Card style={{ marginBottom: 16, borderColor: "var(--warn)" }}><div className="row between wrap"><div><b>{t("cancel.req_from", { n: d.cancellation.requested_by })}</b><p className="small muted" style={{ margin: "4px 0 0" }}>{fdate(d.cancellation.created_at)} · {d.cancellation.reason}</p></div>
+        {admin && <div className="row"><Btn variant="danger" onClick={() => { setWhy(""); setEnding("approve"); }}>{t("cancel.approve")}</Btn><Btn variant="outline" onClick={() => { setWhy(""); setEnding("reject"); }}>{t("cancel.reject")}</Btn></div>}</div></Card>}
+      {d.sub_status === "cancelled" && <Card style={{ marginBottom: 16, borderColor: "var(--bad)" }}><b>{t("cancel.ended_note")}</b>{d.cancellation?.decided_at && <p className="small muted" style={{ margin: "4px 0 0" }}>{fdate(d.cancellation.decided_at)} · {d.cancellation.reason}</p>}</Card>}
       {d.sub_status === "suspended" && <Card style={{ marginBottom: 16, borderColor: "var(--bad)" }}><b style={{ color: "var(--bad)" }}>{t("saas.d.suspended_note")}</b></Card>}
       <div className="grid g2">
         <Card><h3>{t("saas.d.subscription")}</h3>
           <div className="grid g2" style={{ marginTop: 14 }}>
-            <Field label={t("saas.b.plan")}><select className="input" disabled={!lead} value={plan.plan} onChange={(e) => setPlan({ ...plan, plan: e.target.value })}><option value="basic">Basic</option><option value="standard">Standard</option><option value="pro">Pro</option></select></Field>
+            <Field label={t("saas.b.plan")}><select className="input" disabled={!lead} value={plan.plan} onChange={(e) => setPlan({ ...plan, plan: e.target.value })}><option value="basic">{t("plan.name.basic")}</option><option value="standard">{t("plan.name.standard")}</option><option value="pro">{t("plan.name.pro")}</option></select></Field>
             <Field label={t("saas.d.band")}><select className="input" disabled={!lead} value={plan.band} onChange={(e) => setPlan({ ...plan, band: e.target.value })}>{["S", "M", "L", "XL"].map((b) => <option key={b}>{b}</option>)}</select></Field>
             <Field label={t("saas.d.cycle")}><select className="input" disabled={!lead} value={plan.cycle} onChange={(e) => setPlan({ ...plan, cycle: e.target.value })}><option value="monthly">{t("saas.d.cycle.monthly")}</option><option value="yearly">{t("saas.d.cycle.yearly")}</option></select></Field>
             <Field label={t("saas.d.discount")}><input className="input" type="number" min={0} max={100} disabled={!lead} value={plan.discount_pct} onChange={(e) => setPlan({ ...plan, discount_pct: Number(e.target.value) })} /></Field>
@@ -53,6 +57,13 @@ export default function BuildingDetail() {
         <Card><h3>{t("saas.d.buildings")}</h3><ul className="list-dot" style={{ marginTop: 10 }}>{d.buildings.map((b) => <li key={b.id}><span><b>{b.name}</b> · {b.city}</span></li>)}</ul></Card>
         <Card><h3>{t("saas.d.contacts")}</h3><ul className="list-dot" style={{ marginTop: 10 }}>{d.contacts.map((c, i) => <li key={i}><span><b>{c.name}</b> · {t(`role.${c.role}`)}<br /><span className="muted small">{c.email}</span></span></li>)}</ul></Card>
       </div>
+      {ending && <Modal title={t(ending === "reject" ? "cancel.reject" : ending === "approve" ? "cancel.approve" : "cancel.end")} onClose={() => setEnding(null)}>
+        {ending !== "reject" && <p className="small muted">{t("cancel.policy")}</p>}
+        <Field label={t(ending === "reject" ? "cancel.note" : "cancel.reason")}><textarea className="input" rows={3} value={why} onChange={(e) => setWhy(e.target.value)} /></Field>
+        <div className="row"><Btn variant={ending === "reject" ? "primary" : "danger"} disabled={ending !== "reject" && why.trim().length < 3 && ending === "end"} onClick={() => act(async () => {
+          if (ending === "end") await api(`/saas/orgs/${id}/cancel`, { body: { reason: why } });
+          else await api(`/saas/cancellations/${d.cancellation!.id}/decide`, { body: { approve: ending === "approve", note: why } });
+          setEnding(null); })}>{t("common.confirm")}</Btn><Btn variant="ghost" onClick={() => setEnding(null)}>{t("common.cancel")}</Btn></div></Modal>}
       {toast.node}
     </>
   );

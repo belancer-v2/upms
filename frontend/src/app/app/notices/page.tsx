@@ -16,7 +16,7 @@ export default function Notices() {
   if (!rows) return <p className="muted">{t("common.loading")}</p>;
   const toggle = async (n: N) => { const next = open === n.id ? null : n.id; setOpen(next); if (next && !n.read) { await api(`/notices/${n.id}/read`, { method: "POST" }); load(); } };
   return (<>
-    <PageHead title={t("nt.title")} sub={t("nt.sub")} actions={publish && <Btn onClick={() => setForm(true)}>{t("nt.new")}</Btn>} />
+    <PageHead helpKey="notices-read-proof" title={t("nt.title")} sub={t("nt.sub")} actions={publish && <Btn onClick={() => setForm(true)}>{t("nt.new")}</Btn>} />
     {rows.length === 0 && <Card><Empty>{t("nt.empty")}</Empty></Card>}
     <div className="stack">{rows.map((n) => (
       <Card key={n.id} style={{ borderColor: n.priority === "urgent" ? "var(--bad)" : undefined }}>

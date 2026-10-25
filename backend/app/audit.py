@@ -1,5 +1,6 @@
 from sqlalchemy.orm import Session
 
+from . import auditchain  # noqa: F401  (registers the hash-chain and append-only events)
 from .models.core import AuditLog
 
 

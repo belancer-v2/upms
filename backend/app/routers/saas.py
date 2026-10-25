@@ -10,7 +10,7 @@ from ..audit import audit
 from ..db import get_db
 from ..deps import current_user, require_saas
 from ..models.core import AuditLog, Membership, Organization, Property, SAAS_ROLES, User, now
-from ..models.saas import FeatureOverride, Lead, LeadNote, Plan, SaasInvoice, SmsLedger, Subscription
+from ..models.saas import CancellationRequest, FeatureOverride, Lead, LeadNote, Plan, SaasInvoice, SmsLedger, Subscription
 from ..security import hash_password
 from ..services import saas_docs as _m21  # M21: history events and credit notes
 from ..services.entitlements import ALL_FEATURES, current_subscription, org_features, sms_balance
@@ -67,6 +67,7 @@ def overview(user: User = Depends(current_user), db: Session = Depends(get_db)):
         "mrr": sum(r["mrr"] for r in rows) if money_ok else None, "mrr_by_plan": by_plan if money_ok else None,
         "overdue": {"count": len(overdue), "amount": sum(i.amount for i in overdue)} if money_ok else None,
         "trials_ending": [{"id": r["id"], "name": r["name"], "trial_ends": r["trial_ends"], "plan": r["plan"]} for r in trials],
+        "cancel_requests": [_cr(db, r) for r in db.scalars(select(CancellationRequest).where(CancellationRequest.status == "pending").order_by(CancellationRequest.id))] if user.saas_role in ADMINISH else [],
         "leads": leads, "sms_low": [{"id": r["id"], "name": r["name"], "balance": r["sms_balance"]} for r in rows if r["sub_status"] in ("active", "past_due", "trial") and r["sms_balance"] < 100],
         "recent": [{"id": r["id"], "name": r["name"], "plan": r["plan"], "status": r["sub_status"], "created_at": r["created_at"]} for r in sorted(rows, key=lambda x: x["created_at"], reverse=True)[:6]],
     }
@@ -91,7 +92,8 @@ def org_detail(org_id: int, user: User = Depends(current_user), db: Session = De
     ledger = db.scalars(select(SmsLedger).where(SmsLedger.org_id == org_id).order_by(SmsLedger.id.desc()).limit(10)).all()
     props = db.scalars(select(Property).where(Property.org_id == org_id)).all()
     admins = db.execute(select(User.name, User.email, Membership.role).join(Membership, Membership.user_id == User.id).where(Membership.org_id == org_id, Membership.role.in_(("PROPERTY_ADMIN", "AGENCY_MANAGER", "PRESIDENT")))).all()
-    return {**_org_row(db, o),
+    creq = db.scalar(select(CancellationRequest).where(CancellationRequest.org_id == org_id).order_by(CancellationRequest.id.desc()))
+    return {**_org_row(db, o), "cancellation": _cr(db, creq) if creq else None,
             "buildings": [{"id": p.id, "name": p.name, "city": p.city, "floors": p.floors} for p in props],
             "contacts": [{"name": n, "email": e, "role": r} for n, e, r in admins],
             "features": [{"key": k, "plan": k in plan_feats, "override": over.get(k), "on": k in org_features(db, org_id)} for k in ALL_FEATURES],
@@ -118,6 +120,75 @@ def set_status(org_id: int, body: StatusIn, user: User = Depends(require_saas(*A
     audit(db, user_id=user.id, org_id=org_id, action=f"saas.org.{body.status}", entity="organization", entity_id=org_id)
     db.commit()
     return _org_row(db, o)
+
+
+# ---------------- ending a subscription
+class CancelIn(BaseModel):
+    reason: str = Field(min_length=3, max_length=1000)
+
+
+def _end_subscription(db: Session, org_id: int, user: User, reason: str, req: CancellationRequest | None = None) -> CancellationRequest:
+    """Marks the subscription cancelled and writes the history event. The building keeps full access for 30 days, then it is read-only (services/entitlements.cancel_state)."""
+    sub = current_subscription(db, org_id)
+    if not sub or sub.status == "cancelled":
+        raise HTTPException(409, "This subscription is not active")
+    sub.status = "cancelled"
+    when = now()
+    if req is None:
+        req = CancellationRequest(org_id=org_id, requested_by=None, reason=reason)
+        db.add(req)
+    req.status, req.decided_by, req.decided_at = "approved", user.id, when
+    for other in db.scalars(select(CancellationRequest).where(CancellationRequest.org_id == org_id, CancellationRequest.status == "pending", CancellationRequest.id != (req.id or 0))):
+        other.status, other.decided_by, other.decided_at = "withdrawn", user.id, when
+    _m21.record_event(db, sub, "cancel", user.id)
+    audit(db, user_id=user.id, org_id=org_id, action="saas.subscription.cancel", entity="subscription", entity_id=sub.id, meta={"reason": reason})
+    db.flush()
+    return req
+
+
+@router.post("/orgs/{org_id}/cancel")
+def cancel_subscription(org_id: int, body: CancelIn, user: User = Depends(require_saas(*ADMINISH)), db: Session = Depends(get_db)):
+    if not db.get(Organization, org_id):
+        raise HTTPException(404, "Not found")
+    _end_subscription(db, org_id, user, body.reason.strip())
+    db.commit()
+    return _org_row(db, db.get(Organization, org_id))
+
+
+def _cr(db: Session, r: CancellationRequest) -> dict:
+    org, by = db.get(Organization, r.org_id), (db.get(User, r.requested_by) if r.requested_by else None)
+    return {"id": r.id, "org_id": r.org_id, "org": org.name if org else "", "requested_by": by.name if by else "", "reason": r.reason, "status": r.status,
+            "created_at": r.created_at.isoformat(), "decided_at": r.decided_at.isoformat() if r.decided_at else None, "decision_note": r.decision_note}
+
+
+@router.get("/cancellations")
+def cancellations(status: str = "", user: User = Depends(require_saas(*ADMINISH)), db: Session = Depends(get_db)):
+    q = select(CancellationRequest).order_by(CancellationRequest.id.desc())
+    if status:
+        q = q.where(CancellationRequest.status == status)
+    return [_cr(db, r) for r in db.scalars(q)]
+
+
+class DecideIn(BaseModel):
+    approve: bool
+    note: str = ""
+
+
+@router.post("/cancellations/{rid}/decide")
+def decide_cancellation(rid: int, body: DecideIn, user: User = Depends(require_saas(*ADMINISH)), db: Session = Depends(get_db)):
+    r = db.get(CancellationRequest, rid)
+    if not r:
+        raise HTTPException(404, "Not found")
+    if r.status != "pending":
+        raise HTTPException(409, "This request is already decided")
+    r.decision_note = body.note.strip()
+    if body.approve:
+        _end_subscription(db, r.org_id, user, r.reason, r)
+    else:
+        r.status, r.decided_by, r.decided_at = "rejected", user.id, now()
+        audit(db, user_id=user.id, org_id=r.org_id, action="saas.cancellation.reject", entity="cancellation", entity_id=r.id)
+    db.commit()
+    return _cr(db, r)
 
 
 class PlanChangeIn(BaseModel):
@@ -232,27 +303,45 @@ class RunIn(BaseModel):
     period: str = Field(pattern=r"^\d{4}-\d{2}$")
 
 
-@router.post("/invoices/run")
-def run_invoices(body: RunIn, user: User = Depends(require_saas(*MONEY)), db: Session = Depends(get_db)):
-    """Monthly run. Safe to press twice: an organization is billed once per period."""
+def grant_allowance(db: Session, sub: Subscription, plan: Plan, period: str, user_id: int | None) -> bool:
+    """The plan's monthly SMS and email credits for one period. Idempotent: the ledger reason carries the period, a second call adds nothing."""
+    from ..models.credits import EmailLedger
+    reason = f"Monthly allowance {period}"
+    given = False
+    if not db.scalar(select(SmsLedger.id).where(SmsLedger.org_id == sub.org_id, SmsLedger.reason == reason)):
+        db.add(SmsLedger(org_id=sub.org_id, delta=plan.sms_included.get(sub.band, 0), reason=reason, by_user_id=user_id))
+        given = True
+    if (plan.email_included or {}).get(sub.band, 0) > 0 and not db.scalar(select(EmailLedger.id).where(EmailLedger.org_id == sub.org_id, EmailLedger.reason == reason)):
+        db.add(EmailLedger(org_id=sub.org_id, delta=plan.email_included[sub.band], reason=reason, by_user_id=user_id))
+        given = True
+    return given
+
+
+def generate_subscription_invoices(db: Session, period: str, user_id: int | None = None) -> tuple[int, int]:
+    """Monthly run for a period like 2026-10. An organization is billed once per period. Returns (created, total).
+    Shared by the console button below and the scheduled job (app/jobs)."""
     made, total = 0, 0
     for sub in db.scalars(select(Subscription).where(Subscription.status.in_(("active", "past_due")))):
         plan = db.get(Plan, sub.plan_key)
         if not plan or sub.band not in plan.monthly:
             continue
         yearly = sub.cycle == "yearly"
-        period = body.period[:4] if yearly else body.period
-        if yearly and body.period[5:] != f"{sub.started_at:%m}":
+        bill_period = period[:4] if yearly else period
+        if yearly and period[5:] != f"{sub.started_at:%m}":
             continue
-        if db.scalar(select(SaasInvoice.id).where(SaasInvoice.org_id == sub.org_id, SaasInvoice.kind == "subscription", SaasInvoice.period == period, SaasInvoice.status != "void")):
+        if db.scalar(select(SaasInvoice.id).where(SaasInvoice.org_id == sub.org_id, SaasInvoice.kind == "subscription", SaasInvoice.period == bill_period, SaasInvoice.status != "void")):
             continue
         amt = int(monthly_price(db, sub) * (10 if yearly else 1))
-        _new_invoice(db, sub.org_id, "subscription", period, f"{plan.name} · {sub.band} · {period}", amt, 10)
-        db.add(SmsLedger(org_id=sub.org_id, delta=plan.sms_included.get(sub.band, 0), reason=f"Monthly allowance {body.period}", by_user_id=user.id))
-        if (plan.email_included or {}).get(sub.band, 0) > 0:
-            from ..models.credits import EmailLedger
-            db.add(EmailLedger(org_id=sub.org_id, delta=plan.email_included[sub.band], reason=f"Monthly allowance {body.period}", by_user_id=user.id))
+        _new_invoice(db, sub.org_id, "subscription", bill_period, f"{plan.name} · {sub.band} · {bill_period}", amt, 10)
+        grant_allowance(db, sub, plan, period, user_id)
         made, total = made + 1, total + amt
+    return made, total
+
+
+@router.post("/invoices/run")
+def run_invoices(body: RunIn, user: User = Depends(require_saas(*MONEY)), db: Session = Depends(get_db)):
+    """Monthly run. Safe to press twice: an organization is billed once per period."""
+    made, total = generate_subscription_invoices(db, body.period, user.id)
     audit(db, user_id=user.id, action="saas.invoices.run", entity="period", entity_id=body.period, meta={"created": made, "total": total})
     db.commit()
     return {"created": made, "total": total}
@@ -391,7 +480,11 @@ def add_staff(body: StaffIn, user: User = Depends(require_saas("SUPER_ADMIN")), 
     email = body.email.strip().lower()
     if db.scalar(select(User).where(User.email == email)):
         raise HTTPException(409, "Email already used")
-    u = User(email=email, name=body.name, phone=body.phone, password_hash=hash_password(body.password), saas_role=body.role)
+    from ..services import passwords
+    bad = passwords.check(body.password, email=email, name=body.name, phone=body.phone)
+    if bad:
+        raise HTTPException(422, bad)
+    u = User(email=email, name=body.name, phone=body.phone, password_hash=hash_password(body.password), saas_role=body.role, must_change_password=True)
     db.add(u)
     db.flush()
     audit(db, user_id=user.id, action="saas.staff.add", entity="user", entity_id=u.id, meta={"role": body.role})
@@ -417,6 +510,9 @@ def patch_staff(uid: int, body: StaffPatch, user: User = Depends(require_saas("S
         u.saas_role = body.role
     if body.active is not None:
         u.is_active = body.active
+    if body.role or body.active is False:
+        from ..services.sessions import revoke_all
+        revoke_all(db, u.id, "staff_changed")  # a changed or removed SaaS role takes effect on every device at once
     audit(db, user_id=user.id, action="saas.staff.update", entity="user", entity_id=uid, meta=body.model_dump(exclude_none=True))
     db.commit()
     return {"ok": True}

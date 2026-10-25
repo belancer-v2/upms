@@ -1,7 +1,7 @@
 """Service charge: rules, invoices, payments, and the message queue used for reminders."""
 from datetime import date, datetime
 
-from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy import BigInteger, Boolean, Date, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from ..db import Base
@@ -15,7 +15,7 @@ class ChargeRule(Base):
     name: Mapped[str] = mapped_column(String(80))
     name_bn: Mapped[str] = mapped_column(String(80), default="")
     kind: Mapped[str] = mapped_column(String(10), default="flat")   # flat | per_sqft
-    amount: Mapped[int] = mapped_column(Integer)                    # paisa. For per_sqft: paisa per square foot
+    amount: Mapped[int] = mapped_column(BigInteger)                    # paisa. For per_sqft: paisa per square foot
     active: Mapped[bool] = mapped_column(Boolean, default=True)
 
 
@@ -29,8 +29,8 @@ class Invoice(Base):
     number: Mapped[str] = mapped_column(String(32))
     issue_date: Mapped[date] = mapped_column(Date)
     due_date: Mapped[date] = mapped_column(Date)
-    total: Mapped[int] = mapped_column(Integer)                     # paisa
-    paid: Mapped[int] = mapped_column(Integer, default=0)           # paisa, verified payments only
+    total: Mapped[int] = mapped_column(BigInteger)                     # paisa
+    paid: Mapped[int] = mapped_column(BigInteger, default=0)           # paisa, verified payments only
     status: Mapped[str] = mapped_column(String(8), default="open")  # open | partial | paid | void
 
 
@@ -40,7 +40,7 @@ class InvoiceLine(Base):
     invoice_id: Mapped[int] = mapped_column(ForeignKey("invoices.id"), index=True)
     description: Mapped[str] = mapped_column(String(120))
     description_bn: Mapped[str] = mapped_column(String(120), default="")
-    amount: Mapped[int] = mapped_column(Integer)
+    amount: Mapped[int] = mapped_column(BigInteger)
 
 
 class Payment(Base):
@@ -49,7 +49,7 @@ class Payment(Base):
     property_id: Mapped[int] = mapped_column(ForeignKey("properties.id"), index=True)
     invoice_id: Mapped[int] = mapped_column(ForeignKey("invoices.id"), index=True)
     unit_id: Mapped[int] = mapped_column(Integer, index=True)
-    amount: Mapped[int] = mapped_column(Integer)
+    amount: Mapped[int] = mapped_column(BigInteger)
     method: Mapped[str] = mapped_column(String(8))                  # bkash | nagad | bank | cash
     trx_id: Mapped[str] = mapped_column(String(40), default="")
     paid_on: Mapped[date] = mapped_column(Date)

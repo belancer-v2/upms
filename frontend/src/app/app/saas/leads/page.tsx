@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Btn, Card, Chip, Modal, PageHead } from "@/components/ui";
 import { api, fdate, ftime } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { keyLabel } from "@/lib/act";
 import { useT } from "@/lib/i18n";
 import { LeadMailTimeline } from "@/components/mailbits";
 
@@ -18,7 +19,7 @@ export default function Leads() {
   const addNote = async () => { if (!open || !note.trim()) return; await api(`/saas/leads/${open.id}/notes`, { body: { text: note } }); setNote(""); load(); };
   return (
     <>
-      <PageHead title={t("saas.leads.title")} sub={t("saas.leads.sub")} />
+      <PageHead helpKey="saas-leads" title={t("saas.leads.title")} sub={t("saas.leads.sub")} />
       <div style={{ display: "grid", gridTemplateColumns: "repeat(6, minmax(166px, 1fr))", gap: 14, overflowX: "auto", paddingBottom: 8 }}>
         {COLS.map((c) => {
           const list = rows.filter((r) => r.status === c);
@@ -37,7 +38,7 @@ export default function Leads() {
         })}
       </div>
       {open && <Modal title={open.name} onClose={() => setOpen(null)}>
-        <dl className="kv"><dt>{t("site.demo.building")}</dt><dd>{open.building || "—"} · {open.city}</dd><dt>{t("site.demo.flats")}</dt><dd>{open.flats || "—"}</dd><dt>{t("site.demo.phone")}</dt><dd>{open.phone}</dd><dt>{t("auth.email")}</dt><dd>{open.email || "—"}</dd><dt>{t("saas.leads.owner")}</dt><dd>{open.owner || t("saas.leads.unassigned")}</dd><dt>{t("common.date")}</dt><dd>{fdate(open.created_at)} · {open.source}</dd></dl>
+        <dl className="kv"><dt>{t("site.demo.building")}</dt><dd>{open.building || "—"} · {open.city}</dd><dt>{t("site.demo.flats")}</dt><dd>{open.flats || "—"}</dd><dt>{t("site.demo.phone")}</dt><dd>{open.phone}</dd><dt>{t("auth.email")}</dt><dd>{open.email || "—"}</dd><dt>{t("saas.leads.owner")}</dt><dd>{open.owner || t("saas.leads.unassigned")}</dd><dt>{t("common.date")}</dt><dd>{fdate(open.created_at)} · {keyLabel(t, open.source)}</dd></dl>
         {open.message && <p style={{ marginTop: 14 }}>{open.message}</p>}
         <LeadMailTimeline leadId={open.id} />
         <h3 style={{ margin: "18px 0 8px" }}>{t("saas.leads.notes")}</h3>

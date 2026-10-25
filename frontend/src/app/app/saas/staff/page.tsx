@@ -16,7 +16,7 @@ export default function Staff() {
   const create = async () => { try { await api("/saas/staff", { body: f }); setAdd(false); setF({ name: "", email: "", role: "SAAS_USER", password: "" }); load(); } catch (e: any) { toast.show(e.message); } };
   return (
     <>
-      <PageHead title={t("saas.staff.title")} sub={t("saas.staff.sub")} actions={sup && <Btn onClick={() => setAdd(true)}>{t("saas.staff.add")}</Btn>} />
+      <PageHead helpKey="saas-team" title={t("saas.staff.title")} sub={t("saas.staff.sub")} actions={sup && <Btn onClick={() => setAdd(true)}>{t("saas.staff.add")}</Btn>} />
       <DataTable rows={rows} cols={[
         { key: "name", head: t("common.name"), render: (r) => <b>{pick(r.name, r.name_bn)}</b> }, { key: "email", head: t("auth.email") },
         { key: "role", head: t("saas.staff.role"), render: (r) => <Chip>{t(`role.${r.role}`)}</Chip> },

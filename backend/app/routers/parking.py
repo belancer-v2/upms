@@ -11,12 +11,13 @@ from sqlalchemy.orm import Session
 from .. import config
 from ..audit import audit
 from ..db import get_db
+from ..services.storage import get_storage
 from ..deps import Ctx, property_ctx
 from ..models.core import now
 from ..models.parking import ParkingAllocation, ParkingEntitlement, ParkingSetting, ParkingSlot, ParkingVisit, Vehicle
 from ..models.property import Occupancy, Unit
 from ..permissions import COMMITTEE, MANAGE, RESIDENT
-from ..services.parking import KINDS, clean_plate, entitlement, held, set_entitlement
+from ..services.parking import KINDS, clean_plate, entitlement, flag_unfit_vehicles, held, set_entitlement
 
 router = APIRouter(prefix="/api/parking", tags=["parking"])
 SEE = MANAGE | COMMITTEE | {"AUDITOR", "CARETAKER", "GUARD"}   # the slot map
@@ -232,9 +233,11 @@ def allocate(sid: int, body: AllocIn, ctx: Ctx = Depends(property_ctx), db: Sess
     if cur:
         cur.until = date.today()
     db.add(ParkingAllocation(slot_id=s.id, unit_id=u.id, vehicle_kind=s.kind, since=date.today()))
+    db.flush()
     _log(db, ctx, "parking.reassign" if cur else "parking.allocate", "parking_slot", s.id, {"code": s.code, "to": u.number, "from": db.get(Unit, cur.unit_id).number if cur else None})
+    flagged = flag_unfit_vehicles(db, cur.unit_id, ctx.user.id, ctx.property.org_id, ctx.property.id) if cur else 0
     db.commit()
-    return _slot_row(s, u, _owners(db, {u.id}).get(u.id))
+    return _slot_row(s, u, _owners(db, {u.id}).get(u.id)) | {"vehicles_to_review": flagged}
 
 
 @router.post("/slots/{sid}/unallocate")
@@ -246,9 +249,11 @@ def unallocate(sid: int, ctx: Ctx = Depends(property_ctx), db: Session = Depends
     if not cur:
         raise HTTPException(409, "The slot is already free")
     cur.until = date.today()
+    db.flush()
     _log(db, ctx, "parking.unallocate", "parking_slot", s.id, {"code": s.code, "from": db.get(Unit, cur.unit_id).number})
+    flagged = flag_unfit_vehicles(db, cur.unit_id, ctx.user.id, ctx.property.org_id, ctx.property.id)
     db.commit()
-    return _slot_row(s, None, None)
+    return _slot_row(s, None, None) | {"vehicles_to_review": flagged}
 
 
 class SwapIn(BaseModel):
@@ -272,9 +277,11 @@ def swap(body: SwapIn, ctx: Ctx = Depends(property_ctx), db: Session = Depends(g
     ua, ub = ca.unit_id, cb.unit_id
     ca.until = cb.until = date.today()
     db.add_all([ParkingAllocation(slot_id=a.id, unit_id=ub, vehicle_kind=a.kind, since=date.today()), ParkingAllocation(slot_id=b.id, unit_id=ua, vehicle_kind=b.kind, since=date.today())])
+    db.flush()
     _log(db, ctx, "parking.swap", "parking_slot", a.id, {"a": a.code, "b": b.code, "unit_a": db.get(Unit, ua).number, "unit_b": db.get(Unit, ub).number})
+    flagged = sum(flag_unfit_vehicles(db, x, ctx.user.id, ctx.property.org_id, ctx.property.id) for x in (ua, ub))
     db.commit()
-    return {"ok": True}
+    return {"ok": True, "vehicles_to_review": flagged}
 
 
 @router.get("/handover")
@@ -435,7 +442,7 @@ def remove_vehicle(vid: int, ctx: Ctx = Depends(property_ctx), db: Session = Dep
     _gate(ctx)
     v = _vehicle(db, ctx, vid)
     if v.photo:
-        (config.UPLOAD_DIR / "vehicles" / v.photo).unlink(missing_ok=True)
+        get_storage().delete(f"vehicles/{v.photo}")
     _log(db, ctx, "parking.vehicle.remove", "vehicle", v.id, {"reg": v.reg_no})
     db.delete(v)
     db.commit()
@@ -491,12 +498,10 @@ async def upload_photo(vid: int, file: UploadFile = File(...), ctx: Ctx = Depend
         raise HTTPException(413, "The photo is bigger than 2 MB")
     if not data or not data.startswith(spec[1]):
         raise HTTPException(422, "The file does not look like its type")
-    folder = config.UPLOAD_DIR / "vehicles"
-    folder.mkdir(parents=True, exist_ok=True)
     if v.photo:
-        (folder / v.photo).unlink(missing_ok=True)
+        get_storage().delete(f"vehicles/{v.photo}")
     v.photo, v.photo_type = f"{v.id}_{secrets.token_hex(8)}.{spec[0]}", file.content_type
-    (folder / v.photo).write_bytes(data)
+    get_storage().put(f"vehicles/{v.photo}", data, file.content_type or "")
     _log(db, ctx, "parking.vehicle.photo", "vehicle", v.id)
     db.commit()
     return _veh(v, db.get(Unit, v.unit_id).number)
@@ -508,10 +513,10 @@ def get_photo(vid: int, ctx: Ctx = Depends(property_ctx), db: Session = Depends(
     v = _vehicle(db, ctx, vid, write=False)
     if not (ctx.has(*(SEE)) or v.unit_id in ctx.unit_ids):
         raise HTTPException(404, "Vehicle not found")
-    path = config.UPLOAD_DIR / "vehicles" / (v.photo or "x")
-    if not v.photo or not path.exists():
+    key = f"vehicles/{v.photo or 'x'}"
+    if not v.photo or not get_storage().exists(key):
         raise HTTPException(404, "No photo")
-    return FileResponse(path, media_type=v.photo_type, headers={"X-Content-Type-Options": "nosniff"})
+    return get_storage().serve(key, v.photo_type, headers={"X-Content-Type-Options": "nosniff"})
 
 
 # ---------------- visitor bays

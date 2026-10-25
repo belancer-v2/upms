@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session
 from .. import config
 from ..audit import audit
 from ..db import get_db
+from ..services.storage import get_storage
 from ..deps import Ctx, current_user, property_ctx
 from ..models.core import Membership, User, now
 from ..models.profile import Profile
@@ -201,10 +202,10 @@ async def upload_photo(kind: str, rid: int, file: UploadFile = File(...), x_prop
     p = _get_or_new(db, kind, rid)
     old = p.photo_file
     name = f"{kind}_{rid}_{secrets.token_hex(6)}.{TYPES[real]}"
-    (avatar_dir() / name).write_bytes(data)
+    get_storage().put(f"avatars/{name}", data, real)
     p.photo_file, p.photo_type, p.photo_ver, p.updated_at = name, real, (p.photo_ver or 0) + 1, now()
     if old:
-        (avatar_dir() / old).unlink(missing_ok=True)
+        get_storage().delete(f"avatars/{old}")
     _audit(db, user, a, "profile.photo", kind, rid, {"size": len(data), "type": real})
     db.commit()
     return payload(kind, rid, a, p)
@@ -217,7 +218,7 @@ def delete_photo(kind: str, rid: int, x_property_id: int = Header(default=0), us
         raise HTTPException(403, "Your role cannot do this")
     p = _row(db, kind, rid)
     if p and p.photo_file:
-        (avatar_dir() / p.photo_file).unlink(missing_ok=True)
+        get_storage().delete(f"avatars/{p.photo_file}")
         p.photo_file, p.photo_type, p.photo_ver = "", "", (p.photo_ver or 0) + 1
         _audit(db, user, a, "profile.photo.remove", kind, rid)
         db.commit()
@@ -228,8 +229,8 @@ def delete_photo(kind: str, rid: int, x_property_id: int = Header(default=0), us
 def photo(kind: str, rid: int, v: int = 0, x_property_id: int = Header(default=0), user: User = Depends(current_user), db: Session = Depends(get_db)):
     access(db, user, x_property_id, kind, rid)
     p = _row(db, kind, rid)
-    path = avatar_dir() / p.photo_file if p and p.photo_file else None
-    if not path or not path.exists():
+    key = f"avatars/{p.photo_file}" if p and p.photo_file else None
+    if not key or not get_storage().exists(key):
         raise HTTPException(404, "No photo")
     # The ?v= number changes with every new photo, so a day of private caching is safe.
-    return FileResponse(path, media_type=p.photo_type, headers={"Cache-Control": "private, max-age=86400"})
+    return get_storage().serve(key, p.photo_type, headers={"Cache-Control": "private, max-age=86400"})

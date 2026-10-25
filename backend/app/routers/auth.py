@@ -1,22 +1,25 @@
-from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from .. import config
 from ..audit import audit
 from ..db import get_db
-from ..deps import current_user
+from ..deps import current_user, current_user_any
 from ..models.core import Membership, Organization, Property, User
-from ..security import make_token, verify_password
+from ..netutil import client_ip
+from ..security import verify_password_or_dummy
+from ..services import ratelimit, sessions
 from ..services.entitlements import current_subscription, org_features
 
 router = APIRouter(prefix="/api", tags=["auth"])
 
 
 class LoginIn(BaseModel):
-    email: str
-    password: str
+    email: str = Field(max_length=160)
+    password: str = Field(max_length=200)
+    device: str = Field(default="", max_length=80)   # optional label for the Sessions list; derived from the browser when empty
 
 
 def me_payload(db: Session, user: User) -> dict:
@@ -45,7 +48,8 @@ def me_payload(db: Session, user: User) -> dict:
                 roles_by_prop[pid].append(m.role)
     return {
         "user": {"id": user.id, "name": user.name, "name_bn": user.name_bn, "email": user.email,
-                 "phone": user.phone, "lang": user.lang, "saas_role": user.saas_role},
+                 "phone": user.phone, "lang": user.lang, "saas_role": user.saas_role,
+                 "must_change_password": bool(user.must_change_password)},
         "properties": [
             {"id": p.id, "name": p.name, "name_bn": p.name_bn, "city": p.city, "org_id": p.org_id,
              "org_name": orgs[p.org_id].name if p.org_id in orgs else "", "roles": roles_by_prop.get(p.id, []),
@@ -58,18 +62,47 @@ def me_payload(db: Session, user: User) -> dict:
     }
 
 
+# Sign-in throttling. Failures are counted per account, per account+address and per address; once a counter reaches its threshold the key
+# locks for 30 s, then 60 s, 2 min ... up to 30 min (progressive delay). Counters live in the rate_limits table, so every worker agrees.
+LOGIN_THRESHOLDS = {"acct": 10, "pair": 5, "ip": 20}
+NEUTRAL_LOCK = "Too many sign-in attempts. Please wait a few minutes and try again."
+
+
 @router.post("/auth/login")
-def login(body: LoginIn, db: Session = Depends(get_db)):
-    user = db.scalar(select(User).where(User.email == body.email.strip().lower()))
-    if not user or not user.is_active or not verify_password(body.password, user.password_hash):
+def login(body: LoginIn, request: Request, response: Response, db: Session = Depends(get_db)):
+    email = body.email.strip().lower()
+    ip = client_ip(request)
+    keys = {"acct": f"login:a:{ratelimit.hkey(email)}", "pair": f"login:p:{ratelimit.hkey(email, ip)}", "ip": f"login:i:{ip}"}
+    wait = max(ratelimit.locked_for(k) for k in keys.values())
+    if wait:
+        raise ratelimit.too_many(wait, NEUTRAL_LOCK)
+    user = db.scalar(select(User).where(User.email == email))
+    # one bcrypt check whether or not the account exists, and one message for every failure: no user enumeration by content or timing
+    ok = verify_password_or_dummy(body.password, user.password_hash if user else None)
+    if not (ok and user and user.is_active):
+        locked = {scope: ratelimit.fail(k, LOGIN_THRESHOLDS[scope]) for scope, k in keys.items()}
+        if user:
+            audit(db, user_id=user.id, action="auth.login_failed", entity="user", entity_id=user.id, meta={"ip": ip})
+            for scope, secs in locked.items():
+                if secs:
+                    audit(db, user_id=user.id, action="auth.lockout", entity="user", entity_id=user.id, meta={"scope": scope, "seconds": secs, "ip": ip})
+            db.commit()
+        elif any(locked.values()):
+            audit(db, action="auth.lockout", entity="login", meta={"scope": "unknown_account", "ip": ip})
+            db.commit()
         raise HTTPException(401, "Wrong email or password")
-    audit(db, user_id=user.id, action="auth.login", entity="user", entity_id=user.id)
+    if config.REQUIRE_EMAIL_VERIFICATION and not user.email_verified:
+        raise HTTPException(403, "Please confirm your email address first. We sent you a link.", headers={"X-Error-Code": "email_unverified"})
+    ratelimit.clear(keys["acct"])
+    ratelimit.clear(keys["pair"])
+    toks = sessions.login_tokens(db, user, request, response, body.device)
+    audit(db, user_id=user.id, action="auth.login", entity="user", entity_id=user.id, meta={"ip": ip})
     db.commit()
-    return {"token": make_token(user.id), **me_payload(db, user)}
+    return {**toks, **me_payload(db, user)}
 
 
 @router.get("/me")
-def me(user: User = Depends(current_user), db: Session = Depends(get_db)):
+def me(user: User = Depends(current_user_any), db: Session = Depends(get_db)):
     return me_payload(db, user)
 
 
@@ -88,7 +121,7 @@ def set_lang(body: LangIn, user: User = Depends(current_user), db: Session = Dep
 
 @router.get("/auth/demo-accounts")
 def demo_accounts(db: Session = Depends(get_db)):
-    if not config.DEMO:
+    if not config.DEMO or config.PRODUCTION:
         return {"enabled": False, "accounts": []}
     rows = db.scalars(select(User).where(User.email.like("%@flatwise.demo")).order_by(User.id)).all()
     out = []

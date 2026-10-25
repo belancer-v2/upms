@@ -142,14 +142,14 @@ export const feat = {
     "feat.billing": "Service charge bills and receipts", "feat.expenses": "Expense book with vouchers", "feat.notices": "Notices with read proof", "feat.resident_web": "Resident mobile web and SMS links",
     "feat.reports": "Collection, dues and expense reports", "feat.staff": "Staff registry, NID vault and payroll", "feat.assets": "Fixed and current assets register", "feat.tenant_dmp": "Tenant onboarding and DMP pack",
     "feat.reminders": "Automatic due reminders by SMS", "feat.caretaker_app": "Caretaker app, Bangla and offline-friendly", "feat.cash_confirm": "Cash collection with payer confirmation", "feat.policies": "Policies with version and acceptance",
-    "feat.resident_portal": "Resident portal and app", "feat.visitor": "Visitor pass", "feat.amenities": "Amenity booking", "feat.parking": "Parking registry", "feat.maintenance": "Preventive maintenance schedules",
+    "feat.resident_portal": "Resident portal and app", "feat.visitor": "Visitor pass", "feat.amenities": "Amenity booking", "feat.parking": "Parking registry", "feat.maintenance": "Vendor contracts and service visits (AMC)",
     "feat.cash_otp": "Cash collection with OTP", "feat.priority_support": "Priority support",
   },
   bn: {
     "feat.billing": "সার্ভিস চার্জ বিল ও রসিদ", "feat.expenses": "ভাউচারসহ খরচের খাতা", "feat.notices": "পড়ার প্রমাণসহ নোটিশ", "feat.resident_web": "বাসিন্দার মোবাইল ওয়েব ও এসএমএস লিংক",
     "feat.reports": "আদায়, বকেয়া ও খরচের রিপোর্ট", "feat.staff": "স্টাফ তালিকা, এনআইডি ভল্ট ও বেতন", "feat.assets": "স্থায়ী ও চলতি সম্পদের তালিকা", "feat.tenant_dmp": "ভাড়াটিয়া যুক্তকরণ ও ডিএমপি প্যাক",
     "feat.reminders": "এসএমএসে স্বয়ংক্রিয় বকেয়া রিমাইন্ডার", "feat.caretaker_app": "কেয়ারটেকার অ্যাপ, বাংলা ও অফলাইন-বান্ধব", "feat.cash_confirm": "পরিশোধকারীর নিশ্চিতকরণসহ নগদ সংগ্রহ", "feat.policies": "সংস্করণ ও সম্মতিসহ নীতিমালা",
-    "feat.resident_portal": "বাসিন্দা পোর্টাল ও অ্যাপ", "feat.visitor": "দর্শনার্থী পাস", "feat.amenities": "সুবিধা বুকিং", "feat.parking": "পার্কিং তালিকা", "feat.maintenance": "প্রতিরোধমূলক রক্ষণাবেক্ষণ সূচি",
+    "feat.resident_portal": "বাসিন্দা পোর্টাল ও অ্যাপ", "feat.visitor": "দর্শনার্থী পাস", "feat.amenities": "সুবিধা বুকিং", "feat.parking": "পার্কিং তালিকা", "feat.maintenance": "ভেন্ডর চুক্তি ও সার্ভিস ভিজিট (এএমসি)",
     "feat.cash_otp": "ওটিপিসহ নগদ সংগ্রহ", "feat.priority_support": "অগ্রাধিকার সাপোর্ট",
   },
 } as const;

@@ -1,4 +1,5 @@
 "use client";
+import { ExportButton } from "@/components/ExportButton";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Btn, Card, Chip, Empty, Field, Modal, PageHead, Stat, Tabs, useToast } from "@/components/ui";
 import { Pager } from "@/components/pager";
@@ -66,15 +67,15 @@ function FlatPicker({ onPick, picked, autoFocus }: { onPick: (f: Flat | null) =>
 }
 
 export default function Visitors() {
-  const { t } = useT(); const { has } = useAuth();
+  const { t } = useT(); const { has, roles } = useAuth();
   const gate = has("GUARD", "CARETAKER", "PROPERTY_ADMIN", "AGENCY_MANAGER");
-  const resident = has("FLAT_OWNER", "TENANT", "OWNER_REP");
+  const resident = roles.some((r) => ["FLAT_OWNER", "TENANT", "OWNER_REP"].includes(r));   // the resident tabs call endpoints that only residents may use, so staff acting for a building do not get them
   const log = has("PROPERTY_ADMIN", "AGENCY_MANAGER", "PRESIDENT", "SECRETARY", "TREASURER", "MEMBER");
   const tabs = [...(gate ? [{ id: "gate", label: t("vs.tab.gate") }] : []), ...(resident ? [{ id: "mine", label: t("vs.tab.mine") }] : []), ...(log ? [{ id: "log", label: t("vs.tab.log") }] : [])];
   const first = tabs[0]?.id ?? "gate";
   const [tab, setTab] = useState<string>(""); const cur = tabs.some((x) => x.id === tab) ? tab : first;
   return (<>
-    <PageHead title={t("vs.title")} sub={t(cur === "gate" ? "vs.sub_gate" : cur === "mine" ? "vs.sub_mine" : "vs.sub_log")} />
+    <PageHead helpKey="visitor-gate" title={t("vs.title")} sub={t(cur === "gate" ? "vs.sub_gate" : cur === "mine" ? "vs.sub_mine" : "vs.sub_log")} actions={cur === "log" && log ? <ExportButton name="visitors" /> : undefined} />
     {tabs.length > 1 && <div style={{ marginBottom: 14 }}><Tabs value={cur} onChange={setTab} items={tabs} /></div>}
     {cur === "gate" && gate && <Gate />}
     {cur === "mine" && resident && <Mine />}
@@ -305,13 +306,14 @@ function Mine() {
 
 function Now({ pend, reload, toast }: { pend: { waiting: V[]; unread: number } | null; reload: () => void; toast: (m: string) => void }) {
   const { t } = useT(); const since = useSince(); const [page, setPage] = useState(1); const [data, setData] = useState<Paged<Note> | null>(null); const [tick, setTick] = useState(0);
-  useEffect(() => { api<Paged<Note>>(`/visitors/mine/notifications?page=${page}`).then(setData); }, [page, tick, pend?.unread]);
+  useEffect(() => { api<Paged<Note>>(`/visitors/mine/notifications?page=${page}`).then(setData).catch(() => setData(null)); }, [page, tick, pend?.unread]);
   const decide = async (v: V, approve: boolean) => { try { await api(`/visitors/visits/${v.id}/decision`, { body: { approve } }); toast(t(approve ? "vs.approved_ok" : "vs.denied_ok")); reload(); setTick((n) => n + 1); } catch (e: any) { toast(e.message); reload(); } };
   return <>
     <p className="small muted">{t("vs.live_mine")}</p>
     {pend && pend.waiting.length > 0 ? <div style={{ display: "grid", gap: 12, marginBottom: 20 }}>{pend.waiting.map((v) => (
       <Card key={v.id} style={{ borderColor: "var(--warn)" }}>
         <div className="row wrap" style={{ gap: 8, marginBottom: 6 }}><Chip tone="warn">{t("vs.at_gate")}</Chip><Chip tone="info">{t("vs.flat", { n: v.unit })}</Chip><Chip tone="mute">{t(`vs.purpose.${v.purpose}`)}</Chip></div>
+        {v.photo && <div style={{ marginBottom: 8 }}><Photo id={v.id} size={72} /></div>}
         <h3 style={{ margin: 0, fontSize: 20 }}>{v.name}</h3><span className="small muted">{t("vs.people", { n: v.people })}{v.vehicle ? ` · ${v.vehicle}` : ""}{v.phone ? ` · ${v.phone}` : ""} · {t("vs.arrived", { d: since(v.created_at) })}</span>
         <div className="row" style={{ marginTop: 12, gap: 10 }}><Btn size="lg" style={{ flex: 1 }} onClick={() => decide(v, true)}>{t("vs.approve")}</Btn><Btn size="lg" style={{ flex: 1 }} variant="danger" onClick={() => decide(v, false)}>{t("vs.deny")}</Btn></div></Card>))}</div>
       : <Card style={{ marginBottom: 20 }}><Empty>{t("vs.nobody_waiting")}</Empty></Card>}

@@ -7,7 +7,7 @@ export function Toggles() {
   const { theme, setTheme } = useTheme();
   return (
     <div className="row" style={{ gap: 8 }}>
-      <div className="seg" role="group" aria-label="Language">
+      <div className="seg" role="group" aria-label={t("a11y.language")}>
         <button className={lang === "en" ? "on" : ""} onClick={() => setLang("en")}>{t("lang.en")}</button>
         <button className={lang === "bn" ? "on" : ""} onClick={() => setLang("bn")}>{t("lang.bn")}</button>
       </div>

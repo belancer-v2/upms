@@ -1,7 +1,7 @@
 """Month-by-month budget lines and month locks. Money is integer paisa."""
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, UniqueConstraint
+from sqlalchemy import BigInteger, DateTime, ForeignKey, Integer, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from ..db import Base
@@ -16,7 +16,7 @@ class BudgetMonth(Base):
     year: Mapped[int] = mapped_column(Integer)
     month: Mapped[int] = mapped_column(Integer)       # 1..12
     category: Mapped[str] = mapped_column(String(12))
-    amount: Mapped[int] = mapped_column(Integer)      # that month, paisa
+    amount: Mapped[int] = mapped_column(BigInteger)      # that month, paisa
 
 
 class BudgetLock(Base):

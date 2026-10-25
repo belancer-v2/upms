@@ -1,0 +1,20 @@
+# Runs the whole backend suite against PostgreSQL:
+#   docker compose -f docker-compose.test.yml up -d --wait
+#   cd backend && TEST_DATABASE_URL=postgresql://flatwise:flatwise@127.0.0.1:55432/flatwise_test .venv/bin/python -m pytest -q
+#   docker compose -f docker-compose.test.yml down -v
+# MySQL/MariaDB (cPanel's database): use the `mariadb` profile and TEST_DATABASE_URL=mysql://root:flatwise@127.0.0.1:53306/flatwise_test
+services:
+  pg:
+    image: postgres:16-alpine
+    environment: {POSTGRES_USER: flatwise, POSTGRES_PASSWORD: flatwise, POSTGRES_DB: flatwise_test}
+    ports: ["55432:5432"]
+    tmpfs: [/var/lib/postgresql/data]
+    healthcheck: {test: ["CMD-SHELL", "pg_isready -U flatwise"], interval: 3s, timeout: 3s, retries: 20}
+  mariadb:
+    profiles: [mariadb]
+    image: mariadb:10.6
+    environment: {MARIADB_ROOT_PASSWORD: flatwise, MARIADB_DATABASE: flatwise_test}
+    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_unicode_ci"]
+    ports: ["53306:3306"]
+    tmpfs: [/var/lib/mysql]
+    healthcheck: {test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"], interval: 3s, timeout: 3s, retries: 30}

@@ -1,7 +1,8 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Btn, Chip, Field, Modal } from "@/components/ui";
 import { Avatar } from "@/components/Avatar";
+import { PhotoPick, uploadPhotoFor } from "@/components/AvatarUploader";
 import { ProfileModal } from "@/components/ProfilePanel";
 import { api, fdate } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -47,12 +48,20 @@ export function PersonLine({ p, showContact }: { p: Person; showContact?: boolea
 
 export function PersonForm({ unit, kinds, onDone, onClose }: { unit: Unit; kinds: ("owner" | "tenant")[]; onDone: (u: Unit, temp?: string | null) => void; onClose: () => void }) {
   const { t } = useT();
-  const [f, setF] = useState({ kind: kinds[0], name: "", name_bn: "", phone: "", email: "", resides: true, create_login: false }); const [err, setErr] = useState("");
+  const [f, setF] = useState({ kind: kinds[0], name: "", name_bn: "", phone: "", email: "", resides: true, create_login: false }); const [err, setErr] = useState(""); const [photo, setPhoto] = useState<File | null>(null); const [busy, setBusy] = useState(false);
   const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setF({ ...f, [k]: e.target.type === "checkbox" ? (e.target as HTMLInputElement).checked : e.target.value });
-  const save = async () => { try { const r = await api(`/units/${unit.id}/occupants`, { body: f }); onDone(r.unit, r.temp_password); } catch (e: any) { setErr(e.message); } };
+  const save = async () => {
+    setBusy(true);
+    try {
+      const r = await api(`/units/${unit.id}/occupants`, { body: f });
+      if (photo && r.occupant_id) { const m = await uploadPhotoFor("occupant", r.occupant_id, photo); if (m) window.alert(`${t("prof.photo")}: ${m}`); }
+      onDone(r.unit, r.temp_password);
+    } catch (e: any) { setErr(e.message); setBusy(false); }
+  };
   return (
     <Modal title={`${t("unit.add_person")} · ${unit.number}`} onClose={onClose}>
       {kinds.length > 1 && <Field label={t("unit.person.kind")}><select className="input" value={f.kind} onChange={set("kind")}>{kinds.map((k) => <option key={k} value={k}>{t(`unit.${k}`)}</option>)}</select></Field>}
+      <PhotoPick file={photo} onFile={setPhoto} name={f.name} />
       <Field label={t("unit.person.name")}><input className="input" value={f.name} onChange={set("name")} /></Field>
       <Field label={t("unit.person.name_bn")}><input className="input" value={f.name_bn} onChange={set("name_bn")} /></Field>
       <div className="grid g2"><Field label={t("unit.person.phone")}><input className="input" inputMode="tel" value={f.phone} onChange={set("phone")} /></Field><Field label={t("unit.person.email")}><input className="input" type="email" value={f.email} onChange={set("email")} /></Field></div>
@@ -60,9 +69,26 @@ export function PersonForm({ unit, kinds, onDone, onClose }: { unit: Unit; kinds
       <label className="row" style={{ marginBottom: 12 }}><input type="checkbox" checked={f.create_login} onChange={set("create_login")} /> {t("unit.person.login")}</label>
       {f.kind === "tenant" && <p className="hint">{t("unit.person.tenant_rule")}</p>}
       {err && <p className="error" role="alert">{err}</p>}
-      <div className="row"><Btn onClick={save} disabled={f.name.trim().length < 2}>{t("common.save")}</Btn><Btn variant="ghost" onClick={onClose}>{t("common.cancel")}</Btn></div>
+      <div className="row"><Btn onClick={save} disabled={busy || f.name.trim().length < 2}>{t("common.save")}</Btn><Btn variant="ghost" onClick={onClose}>{t("common.cancel")}</Btn></div>
     </Modal>
   );
+}
+
+type PkView = { entitlement: Record<string, number>; held: Record<string, number>; slots: { id: number; code: string; kind: string; cover: string }[]; vehicles: { id: number; reg_no: string; kind: string; status: string; temporary: boolean }[] };
+/** Parking at a glance inside the flat panel: slots held against what the flat is promised, and its vehicles. */
+function ParkingSummary({ unitId }: { unitId: number }) {
+  const { t } = useT(); const { has, feature } = useAuth(); const [d, setD] = useState<PkView | null>(null);
+  const ok = feature("parking") && has("PROPERTY_ADMIN", "AGENCY_MANAGER", "PRESIDENT", "SECRETARY", "TREASURER", "MEMBER", "AUDITOR", "CARETAKER", "FLAT_OWNER", "TENANT", "OWNER_REP");
+  useEffect(() => { if (ok) api<PkView>(`/parking/units/${unitId}`).then(setD).catch(() => setD(null)); }, [ok, unitId]);
+  if (!ok || !d) return null;
+  const kinds = ["car", "motorbike", "bicycle"].filter((k) => (d.entitlement[k] ?? 0) > 0 || (d.held[k] ?? 0) > 0);
+  return (<>
+    <h3 style={{ margin: "16px 0 4px" }}>{t("pk.panel.title")}</h3>
+    {kinds.length === 0 && d.vehicles.length === 0 ? <p className="muted small">{t("pk.no_slots")}</p> : <>
+      <div className="row wrap" style={{ gap: 6 }}>{kinds.map((k) => <Chip key={k} tone={(d.held[k] ?? 0) < (d.entitlement[k] ?? 0) ? "warn" : "ok"}>{t("pk.ent_line", { k: t(`pk.kind.${k}`), h: d.held[k] ?? 0, e: d.entitlement[k] ?? 0 })}</Chip>)}</div>
+      {d.slots.length > 0 && <p className="small" style={{ margin: "8px 0 0" }}>{t("pk.slots")}: {d.slots.map((s) => s.code).join(", ")}</p>}
+      {d.vehicles.length > 0 && <p className="small" style={{ margin: "4px 0 0" }}>{t("pk.veh")}: {d.vehicles.map((v) => <span key={v.id} style={{ marginInlineEnd: 8 }}>{v.reg_no}{v.status === "to_review" && <> <Chip tone="warn">{t("pk.veh_review")}</Chip></>}</span>)}</p>}</>}
+  </>);
 }
 
 export function UnitPanel({ unit, onClose, onChange, afterBlock }: { unit: Unit; onClose: () => void; onChange: (u: Unit, temp?: string | null) => void; afterBlock?: React.ReactNode }) {
@@ -79,6 +105,7 @@ export function UnitPanel({ unit, onClose, onChange, afterBlock }: { unit: Unit;
       <h3 style={{ margin: "16px 0 4px" }}>{t("unit.tenants")}</h3>
       {unit.tenants.length ? unit.tenants.map((p) => <div key={p.id}><PersonLine p={p} showContact={contacts} />{(manage || owner) && <Btn size="sm" variant="ghost" onClick={() => confirm(t("unit.confirm_move", { n: p.name })) && call(`/occupants/${p.id}/move-out`)}>{t("unit.move_out")}</Btn>}</div>) : <p className="muted small">{t("unit.none_tenant")}</p>}
       {unit.history.length > 0 && <><h3 style={{ margin: "16px 0 4px" }}>{t("unit.history")}</h3>{unit.history.map((p) => <PersonLine key={p.id} p={p} />)}</>}
+      <ParkingSummary unitId={unit.id} />
       {afterBlock}
       <div className="row wrap" style={{ marginTop: 18 }}>
         {manage && <Btn onClick={() => setAdding(true)}>{t("unit.add_person")}</Btn>}

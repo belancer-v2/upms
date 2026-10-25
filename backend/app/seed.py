@@ -61,6 +61,8 @@ def seed_core(db):
 
 
 def reset():
+    from .prodcheck import forbid_in_production
+    forbid_in_production("seed/reset (drops every table)")
     Base.metadata.drop_all(engine)
     Base.metadata.create_all(engine)
 
@@ -75,11 +77,11 @@ def run():
     print("Seeded. Demo password:", PASSWORD)
 
 
-def seed_plans(db, ctx):
-    from .models.saas import Plan, Subscription
+def plan_catalogue():
+    """The real plan list. Also used by app.bootstrap for production (no demo data)."""
+    from .models.saas import Plan
     P = 100  # paisa per taka
-    base = {"S": 1, "M": 1, "L": 1}
-    db.add_all([
+    return [
         Plan(key="basic", name="Basic", name_bn="বেসিক", sort=1,
              monthly={"S": 1500 * P, "M": 2500 * P, "L": 4000 * P}, setup={"S": 3000 * P, "M": 5000 * P, "L": 8000 * P},
              sms_included={"S": 200, "M": 500, "L": 1000},
@@ -87,13 +89,18 @@ def seed_plans(db, ctx):
         Plan(key="standard", name="Standard", name_bn="স্ট্যান্ডার্ড", sort=2,
              monthly={"S": 3000 * P, "M": 4500 * P, "L": 7000 * P}, setup={"S": 3000 * P, "M": 5000 * P, "L": 8000 * P},
              sms_included={"S": 200, "M": 500, "L": 1000},
-             features=["billing", "expenses", "notices", "resident_web", "reports", "staff", "assets", "tenant_dmp", "reminders", "caretaker_app", "cash_confirm", "policies", "committee", "rental_records", "amenities", "parking"]),
+             features=["billing", "expenses", "notices", "resident_web", "reports", "staff", "assets", "tenant_dmp", "reminders", "caretaker_app", "cash_confirm", "policies", "committee", "rental_records", "amenities", "parking", "maintenance"]),
         Plan(key="pro", name="Pro", name_bn="প্রো", sort=3,
              monthly={"S": 5000 * P, "M": 7500 * P, "L": 11000 * P}, setup={"S": 3000 * P, "M": 5000 * P, "L": 8000 * P},
              sms_included={"S": 200, "M": 500, "L": 1000},
              features=["billing", "expenses", "notices", "resident_web", "reports", "staff", "assets", "tenant_dmp", "reminders", "caretaker_app", "cash_confirm", "policies",
                        "resident_portal", "visitor", "amenities", "parking", "maintenance", "cash_otp", "priority_support", "gateway", "committee", "rental_records"]),
-    ])
+    ]
+
+
+def seed_plans(db, ctx):
+    from .models.saas import Subscription
+    db.add_all(plan_catalogue())
     db.flush()
     # the demo agency and its three buildings run on Pro
     db.add(Subscription(org_id=ctx["agency"].id, plan_key="pro", band="M", flats=96, status="active"))
@@ -564,7 +571,7 @@ def seed_onboarding(db, ctx):
         db.add(c); db.flush()
         for k in docs:
             stored = f"{secrets.token_hex(8)}.png"
-            folder = config.UPLOAD_DIR / str(c.id); folder.mkdir(parents=True, exist_ok=True); (folder / stored).write_bytes(png)
+            __import__("app.services.storage", fromlist=["x"]).get_storage().put(f"{c.id}/{stored}", png, "image/png")
             db.add(TenantDoc(case_id=c.id, kind=k, filename=f"{k}.png", stored=stored, content_type="image/png", size=len(png), status=doc_status))
         return c
     b302 = units["B-302"]
@@ -636,7 +643,7 @@ def seed_profiles(db, ctx):
         nonlocal n
         n += 1
         name = f"{kind}_{rid}_seed{n}.png"
-        (folder / name).write_bytes(_placeholder_png(n * 3 + rid))
+        __import__("app.services.storage", fromlist=["x"]).get_storage().put(f"avatars/{name}", _placeholder_png(n * 3 + rid), "image/png")
         db.add(Profile(kind=kind, ref_id=rid, photo_file=name, photo_type="image/png", photo_ver=1, languages=d.pop("languages", ["Bangla", "English"]), **d))
     info = {
         "president": dict(about="Retired physician. Chairs the committee.", dob=_d(1960, 3, 14), blood_group="B+", profession="Physician", emergency_name="Nasrin Uddin", emergency_phone="01711555001", address="A-801, Sunrise Tower, Dhanmondi"),
@@ -684,8 +691,9 @@ def seed_rental(db, ctx):
     png = bytes.fromhex("89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c4890000000d49444154789c6360000002000001e221bc330000000049454e44ae426082")
     folder = config.UPLOAD_DIR / "rental" / str(b302.id)
     folder.mkdir(parents=True, exist_ok=True)
-    (folder / "seedagreement.pdf").write_bytes(pdf)
-    (folder / "seedtap.png").write_bytes(png)
+    _st = __import__("app.services.storage", fromlist=["x"]).get_storage()
+    _st.put(f"rental/{b302.id}/seedagreement.pdf", pdf, "application/pdf")
+    _st.put(f"rental/{b302.id}/seedtap.png", png, "image/png")
     db.add(RentalAgreement(unit_id=b302.id, title="Rental agreement, B-302", start_date=shift(-6), end_date=today + timedelta(days=40), rent=30000 * 100, advance=60000 * 100,
                            filename="rental-agreement-b302.pdf", stored="seedagreement.pdf", content_type="application/pdf", size=len(pdf), created_by=owner.id))
     seq = 0
@@ -737,6 +745,9 @@ EXTRA_SEEDS.append(seed_mail)
 
 from .seed_saas_reports import seed_saas_reports  # noqa: E402
 EXTRA_SEEDS.append(seed_saas_reports)
+
+from .seed_contracts import seed_contracts  # noqa: E402
+EXTRA_SEEDS.append(seed_contracts)
 
 if __name__ == "__main__":
     run()

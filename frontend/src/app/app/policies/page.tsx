@@ -15,7 +15,7 @@ export default function Policies() {
   useEffect(() => { load(); }, [load, prop?.id]);
   if (!rows) return <p className="muted">{t("common.loading")}</p>;
   return (<>
-    <PageHead title={t("pl.title")} sub={t("pl.sub")} actions={manage && <Btn onClick={() => setForm({})}>{t("pl.new")}</Btn>} />
+    <PageHead helpKey="policies-acceptance" title={t("pl.title")} sub={t("pl.sub")} actions={manage && <Btn onClick={() => setForm({})}>{t("pl.new")}</Btn>} />
     {rows.length === 0 && <Card><Empty>{t("pl.empty")}</Empty></Card>}
     <div className="stack">{rows.map((p) => (<Card key={p.id}>
       <div className="row between wrap"><div><h3 style={{ margin: 0 }}>{pick(p.title, p.title_bn || p.title)}</h3><span className="small muted">{t("pl.version", { n: p.version })} · {t("pl.published", { d: fdate(p.published_at) })}{p.change_note && ` · ${p.change_note}`}</span></div>

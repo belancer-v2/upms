@@ -123,6 +123,28 @@ class RunIn(BaseModel):
     due_day: int = Field(default=10, ge=1, le=28)
 
 
+def make_invoices(db: Session, property_id: int, period: str, due_day: int) -> tuple[int, int]:
+    """One invoice per flat for the period; flats that already have one are skipped. Returns (created, total). Raises ValueError without charge rules.
+    Shared by the button below and the scheduled billing job (app/jobs)."""
+    rule_rows = db.scalars(select(ChargeRule).where(ChargeRule.property_id == property_id, ChargeRule.active).order_by(ChargeRule.id)).all()
+    if not rule_rows:
+        raise ValueError("Add at least one charge rule first")
+    y, m = int(period[:4]), int(period[5:])
+    made, total_all = 0, 0
+    for u in db.scalars(select(Unit).where(Unit.property_id == property_id).order_by(Unit.id)):
+        if db.scalar(select(Invoice.id).where(Invoice.unit_id == u.id, Invoice.period == period)):
+            continue
+        lines = [(r, int(round(r.amount * u.area_sqft)) if r.kind == "per_sqft" else r.amount) for r in rule_rows]
+        total = sum(a for _, a in lines)
+        inv = Invoice(property_id=property_id, unit_id=u.id, period=period, number=f"INV-{property_id}-{period}-{u.number}", issue_date=date(y, m, 1), due_date=date(y, m, due_day), total=total)
+        db.add(inv)
+        db.flush()
+        for r, a in lines:
+            db.add(InvoiceLine(invoice_id=inv.id, description=r.name, description_bn=r.name_bn, amount=a))
+        made, total_all = made + 1, total_all + total
+    return made, total_all
+
+
 @router.post("/run")
 def run(body: RunIn, ctx: Ctx = Depends(property_ctx), db: Session = Depends(get_db)):
     """Creates one invoice per flat for the period. Pressing it twice creates nothing new."""
@@ -130,22 +152,10 @@ def run(body: RunIn, ctx: Ctx = Depends(property_ctx), db: Session = Depends(get
     ctx.need(*MONEY_ROLES)
     if not _period_ok(body.period):
         raise HTTPException(422, "Period must look like 2026-10")
-    rule_rows = db.scalars(select(ChargeRule).where(ChargeRule.property_id == ctx.property.id, ChargeRule.active).order_by(ChargeRule.id)).all()
-    if not rule_rows:
-        raise HTTPException(422, "Add at least one charge rule first")
-    y, m = int(body.period[:4]), int(body.period[5:])
-    made, total_all = 0, 0
-    for u in db.scalars(select(Unit).where(Unit.property_id == ctx.property.id).order_by(Unit.id)):
-        if db.scalar(select(Invoice.id).where(Invoice.unit_id == u.id, Invoice.period == body.period)):
-            continue
-        lines = [(r, int(round(r.amount * u.area_sqft)) if r.kind == "per_sqft" else r.amount) for r in rule_rows]
-        total = sum(a for _, a in lines)
-        inv = Invoice(property_id=ctx.property.id, unit_id=u.id, period=body.period, number=f"INV-{ctx.property.id}-{body.period}-{u.number}", issue_date=date(y, m, 1), due_date=date(y, m, body.due_day), total=total)
-        db.add(inv)
-        db.flush()
-        for r, a in lines:
-            db.add(InvoiceLine(invoice_id=inv.id, description=r.name, description_bn=r.name_bn, amount=a))
-        made, total_all = made + 1, total_all + total
+    try:
+        made, total_all = make_invoices(db, ctx.property.id, body.period, body.due_day)
+    except ValueError as e:
+        raise HTTPException(422, str(e))
     audit(db, user_id=ctx.user.id, org_id=ctx.property.org_id, property_id=ctx.property.id, action="billing.run", entity="period", entity_id=body.period, meta={"created": made, "total": total_all})
     db.commit()
     return {"created": made, "total": total_all}
@@ -328,7 +338,17 @@ def collection_map(period: str, ctx: Ctx = Depends(property_ctx), db: Session = 
     return {i.unit_id: {"status": _view_status(i, date.today()), "balance": max(0, i.total - i.paid), "invoice_id": i.id} for i in db.scalars(select(Invoice).where(Invoice.property_id == ctx.property.id, Invoice.period == period, Invoice.status != "void"))}
 
 
-def _text(step: str, lang: str, b: str, amt: str, period: str, due: str) -> str:
+def _text(step: str, lang: str, b: str, amt: str, period: str, due: str, hall: bool = False) -> str:
+    """Reminder wording. A HALL-<id> invoice is a community hall / amenity booking, not a service charge, and says so."""
+    if hall:
+        n = period.removeprefix("HALL-")
+        en = {"before": f"{b}: payment {amt} for hall booking {n} is due on {due}. Thank you.", "due": f"{b}: payment {amt} for hall booking {n} is due today. Thank you.",
+              "o7": f"{b}: reminder. {amt} for hall booking {n} was due on {due}. Please pay this week.", "o15": f"{b}: {amt} for hall booking {n} is 15 days overdue. Please pay or call the office.",
+              "o30": f"{b}: {amt} for hall booking {n} is 30 days overdue. Please contact the committee."}
+        bn = {"before": f"{b}: হল বুকিং {n}-এর {amt}, {due} তারিখে দেয়। ধন্যবাদ।", "due": f"{b}: হল বুকিং {n}-এর {amt} আজ দেয়। ধন্যবাদ।",
+              "o7": f"{b}: স্মরণ করিয়ে দিচ্ছি। হল বুকিং {n}-এর {amt}, {due} তারিখে দেয় ছিল। এই সপ্তাহে পরিশোধ করুন।", "o15": f"{b}: হল বুকিং {n}-এর {amt} ১৫ দিন বকেয়া। পরিশোধ করুন বা অফিসে ফোন করুন।",
+              "o30": f"{b}: হল বুকিং {n}-এর {amt} ৩০ দিন বকেয়া। কমিটির সাথে যোগাযোগ করুন।"}
+        return (bn if lang == "bn" else en)[step]
     en = {"before": f"{b}: service charge {amt} for {period} is due on {due}. Thank you.", "due": f"{b}: service charge {amt} for {period} is due today. Thank you.",
           "o7": f"{b}: reminder. {amt} for {period} was due on {due}. Please pay this week.", "o15": f"{b}: {amt} for {period} is 15 days overdue. Please pay or call the office.",
           "o30": f"{b}: {amt} for {period} is 30 days overdue. Please contact the committee."}
@@ -338,15 +358,12 @@ def _text(step: str, lang: str, b: str, amt: str, period: str, due: str) -> str:
     return (bn if lang == "bn" else en)[step]
 
 
-@router.post("/reminders/run")
-def reminders(ctx: Ctx = Depends(property_ctx), db: Session = Depends(get_db)):
-    """For each unpaid invoice, queues the latest reminder step that is due and not yet sent, then delivers it."""
-    _gate(ctx)
-    ctx.feature("reminders")
-    ctx.need(*MONEY_ROLES)
-    today, made, failed = date.today(), 0, 0
+def send_reminders(db: Session, prop, today: date | None = None) -> tuple[int, int]:
+    """For each unpaid invoice of the building, queues the latest reminder step that is due and not yet sent, then delivers it.
+    Returns (sent, failed). One message per invoice and step (idempotency key), so running it again the same day sends nothing new."""
     from ..models.core import User
-    for i in db.scalars(select(Invoice).where(Invoice.property_id == ctx.property.id, Invoice.status.in_(("open", "partial")))):
+    today, made, failed = today or date.today(), 0, 0
+    for i in db.scalars(select(Invoice).where(Invoice.property_id == prop.id, Invoice.status.in_(("open", "partial")))):
         offset = (today - i.due_date).days
         due_steps = [s for s, o in STEPS if offset >= o]
         if not due_steps:
@@ -361,12 +378,22 @@ def reminders(ctx: Ctx = Depends(property_ctx), db: Session = Depends(get_db)):
         usr = db.get(User, occ.user_id) if occ.user_id else None
         lang = usr.lang if usr else "bn"
         amt = f"BDT {(i.total - i.paid) / 100:,.0f}"
-        msg = Message(property_id=ctx.property.id, unit_id=i.unit_id, to_name=occ.name, to_phone=occ.phone, template=f"due_{step}", lang=lang, idem_key=key,
-                      body=_text(step, lang, ctx.property.name_bn if lang == "bn" and ctx.property.name_bn else ctx.property.name, amt, i.period, i.due_date.strftime("%d %b")))
+        msg = Message(property_id=prop.id, unit_id=i.unit_id, to_name=occ.name, to_phone=occ.phone, template=f"due_{step}", lang=lang, idem_key=key,
+                      body=_text(step, lang, prop.name_bn if lang == "bn" and prop.name_bn else prop.name, amt, i.period, i.due_date.strftime("%d %b"), hall=i.period.startswith("HALL-")))
         db.add(msg)
-        deliver(db, ctx.property.org_id, msg)
+        deliver(db, prop.org_id, msg)
         made += msg.status == "sent"
         failed += msg.status == "failed"
+    return made, failed
+
+
+@router.post("/reminders/run")
+def reminders(ctx: Ctx = Depends(property_ctx), db: Session = Depends(get_db)):
+    """For each unpaid invoice, queues the latest reminder step that is due and not yet sent, then delivers it."""
+    _gate(ctx)
+    ctx.feature("reminders")
+    ctx.need(*MONEY_ROLES)
+    made, failed = send_reminders(db, ctx.property)
     audit(db, user_id=ctx.user.id, org_id=ctx.property.org_id, property_id=ctx.property.id, action="billing.reminders.run", meta={"sent": made, "failed": failed})
     db.commit()
     return {"sent": made, "failed": failed}

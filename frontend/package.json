@@ -6,7 +6,9 @@
     "dev": "next dev -p 3000",
     "build": "next build",
     "start": "next start -p 3000",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "i18n:audit": "node ../scripts/i18n-audit.cjs",
+    "sweep": "node ../scripts/sweep.cjs"
   },
   "dependencies": {
     "@fontsource-variable/nunito-sans": "^5.1.0",

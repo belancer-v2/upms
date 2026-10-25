@@ -20,7 +20,7 @@ export default function SaasCredits() {
   const money_ok = saas("SUPER_ADMIN", "SAAS_ADMIN", "SAAS_FINANCE"); const [tab, setTab] = useState(money_ok ? "sales" : "balances");
   const tabs = [...(money_ok ? [{ id: "sales", label: t("cc.tab.sales") }, { id: "queue", label: t("cc.tab.queue") }] : []), { id: "packs", label: t("cc.tab.packs") }, { id: "balances", label: t("cc.tab.balances") }, ...(money_ok ? [{ id: "settings", label: t("cc.tab.settings") }] : [])];
   return (<>
-    <PageHead title={t("cc.title")} sub={t("cc.sub")} />
+    <PageHead helpKey="saas-credit-sales" title={t("cc.title")} sub={t("cc.sub")} />
     <div style={{ marginBottom: 16 }}><Tabs value={tab} onChange={setTab} items={tabs} /></div>
     {tab === "sales" && <Sales toast={toast} />}
     {tab === "queue" && <Queue toast={toast} />}

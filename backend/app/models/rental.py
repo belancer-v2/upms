@@ -1,7 +1,7 @@
 """Owner rental records add-on (M14). Private between one flat's owner and its current tenant. Money is integer paisa."""
 from datetime import date, datetime
 
-from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import BigInteger, Boolean, Date, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from ..db import Base
@@ -27,8 +27,8 @@ class RentalAgreement(Base):
     title: Mapped[str] = mapped_column(String(160))
     start_date: Mapped[date] = mapped_column(Date)
     end_date: Mapped[date | None] = mapped_column(Date, nullable=True)
-    rent: Mapped[int] = mapped_column(Integer, default=0)          # monthly, paisa
-    advance: Mapped[int] = mapped_column(Integer, default=0)       # paisa
+    rent: Mapped[int] = mapped_column(BigInteger, default=0)          # monthly, paisa
+    advance: Mapped[int] = mapped_column(BigInteger, default=0)       # paisa
     filename: Mapped[str] = mapped_column(String(160), default="")
     stored: Mapped[str] = mapped_column(String(80), default="")
     content_type: Mapped[str] = mapped_column(String(60), default="")
@@ -43,7 +43,7 @@ class RentalPayment(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     unit_id: Mapped[int] = mapped_column(ForeignKey("units.id"), index=True)
     period: Mapped[str] = mapped_column(String(7), index=True)     # YYYY-MM
-    amount: Mapped[int] = mapped_column(Integer)                   # paisa
+    amount: Mapped[int] = mapped_column(BigInteger)                   # paisa
     method: Mapped[str] = mapped_column(String(8))                 # cash | bank
     paid_on: Mapped[date] = mapped_column(Date)
     note: Mapped[str] = mapped_column(String(300), default="")
@@ -77,7 +77,7 @@ class RentalIssue(Base):
     title: Mapped[str] = mapped_column(String(160))
     body: Mapped[str] = mapped_column(Text, default="")
     status: Mapped[str] = mapped_column(String(12), default="open", index=True)   # open | in_progress | fixed | closed
-    cost: Mapped[int | None] = mapped_column(Integer, nullable=True)              # paisa
+    cost: Mapped[int | None] = mapped_column(BigInteger, nullable=True)              # paisa
     cost_note: Mapped[str] = mapped_column(String(200), default="")
     photo_name: Mapped[str] = mapped_column(String(160), default="")
     photo_stored: Mapped[str] = mapped_column(String(80), default="")

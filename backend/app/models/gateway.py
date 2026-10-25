@@ -1,7 +1,7 @@
 """Optional online payments: per-building gateway settings and one row per checkout attempt."""
 from datetime import datetime
 
-from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import BigInteger, Boolean, DateTime, ForeignKey, Integer, JSON, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from ..db import Base
@@ -29,10 +29,10 @@ class GatewaySession(Base):
     unit_id: Mapped[int] = mapped_column(Integer, index=True)
     user_id: Mapped[int] = mapped_column(Integer)
     provider: Mapped[str] = mapped_column(String(8))
-    amount: Mapped[int] = mapped_column(Integer)                               # paisa credited to the invoice
-    fee: Mapped[int] = mapped_column(Integer, default=0)                       # paisa, from fee_bps at checkout time
+    amount: Mapped[int] = mapped_column(BigInteger)                               # paisa credited to the invoice
+    fee: Mapped[int] = mapped_column(BigInteger, default=0)                       # paisa, from fee_bps at checkout time
     fee_mode: Mapped[str] = mapped_column(String(16), default="building_absorbs")
-    charged: Mapped[int] = mapped_column(Integer)                              # paisa the payer is asked to pay (amount, or amount + fee)
+    charged: Mapped[int] = mapped_column(BigInteger)                              # paisa the payer is asked to pay (amount, or amount + fee)
     status: Mapped[str] = mapped_column(String(8), default="created", index=True)   # created | paid | failed | expired
     provider_ref: Mapped[str] = mapped_column(String(40), default="")
     trx_id: Mapped[str] = mapped_column(String(40), default="")

@@ -14,7 +14,9 @@ from sqlalchemy.orm import Session
 
 from .. import config
 from ..audit import audit
+from ..services.uploads import safe_filename
 from ..db import get_db
+from ..services.storage import get_storage
 from ..deps import Ctx, property_ctx
 from ..models.billing import Message
 from ..models.core import Membership, User, now
@@ -230,18 +232,16 @@ async def _read_upload(file: UploadFile, kinds: dict = ALLOWED) -> tuple[bytes, 
 
 
 def _save(unit_id: int, data: bytes, ext: str) -> str:
-    folder = config.UPLOAD_DIR / "rental" / str(unit_id)
-    folder.mkdir(parents=True, exist_ok=True)
     stored = f"{secrets.token_hex(10)}.{ext}"
-    (folder / stored).write_bytes(data)
+    get_storage().put(f"rental/{unit_id}/{stored}", data)
     return stored
 
 
 def _send(unit_id: int, stored: str, ctype: str, name: str):
-    path = config.UPLOAD_DIR / "rental" / str(unit_id) / (stored or "x")
-    if not stored or not path.exists():
+    key = f"rental/{unit_id}/{stored or 'x'}"
+    if not stored or not get_storage().exists(key):
         raise HTTPException(404, "Not found")
-    return FileResponse(path, media_type=ctype, filename=name or stored, headers={"X-Content-Type-Options": "nosniff"})
+    return get_storage().serve(key, ctype, name or stored, headers={"X-Content-Type-Options": "nosniff"})
 
 
 # ---------------- agreements
@@ -253,7 +253,7 @@ async def add_agreement(uid: int, title: str = Form(..., min_length=1, max_lengt
     if end_date and end_date < start_date:
         raise HTTPException(422, "The end date is before the start date")
     data, ext = await _read_upload(file)
-    a = RentalAgreement(unit_id=uid, title=title.strip(), start_date=start_date, end_date=end_date, rent=rent, advance=advance, filename=(file.filename or f"agreement.{ext}")[:160],
+    a = RentalAgreement(unit_id=uid, title=title.strip(), start_date=start_date, end_date=end_date, rent=rent, advance=advance, filename=safe_filename(file.filename, f"agreement.{ext}"),
                         stored=_save(uid, data, ext), content_type=file.content_type, size=len(data), created_by=ctx.user.id)
     db.add(a)
     db.flush()
@@ -280,7 +280,7 @@ def agreement_file(aid: int, ctx: Ctx = Depends(property_ctx), db: Session = Dep
 @router.delete("/agreements/{aid}")
 def del_agreement(aid: int, ctx: Ctx = Depends(property_ctx), db: Session = Depends(get_db)):
     a, _, _ = _mine(db, RentalAgreement, aid, ctx, owner_only=True)
-    (config.UPLOAD_DIR / "rental" / str(a.unit_id) / a.stored).unlink(missing_ok=True)
+    get_storage().delete(f"rental/{a.unit_id}/{a.stored}")
     db.delete(a)
     audit(db, user_id=ctx.user.id, org_id=ctx.property.org_id, property_id=ctx.property.id, action="rental.agreement.delete", entity="unit", entity_id=a.unit_id)
     db.commit()
@@ -426,7 +426,7 @@ async def add_issue(uid: int, title: str = Form(..., min_length=1, max_length=16
     i = RentalIssue(unit_id=uid, title=title.strip(), body=body.strip(), raised_by=ctx.user.id, raised_side=side)
     if photo is not None and photo.filename:
         data, ext = await _read_upload(photo, {k: v for k, v in ALLOWED.items() if k.startswith("image/")})
-        i.photo_stored, i.photo_type, i.photo_name = _save(uid, data, ext), photo.content_type, photo.filename[:160]
+        i.photo_stored, i.photo_type, i.photo_name = _save(uid, data, ext), photo.content_type, safe_filename(photo.filename, "photo")
     db.add(i)
     db.flush()
     audit(db, user_id=ctx.user.id, org_id=ctx.property.org_id, property_id=ctx.property.id, action="rental.issue.add", entity="unit", entity_id=uid)

@@ -1,7 +1,7 @@
 """SaaS side: plans, subscriptions, leads. Prices are stored per building size band, in paisa."""
 from datetime import datetime
 
-from sqlalchemy import JSON, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import BigInteger, DateTime, ForeignKey, Integer, JSON, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from ..db import Base
@@ -74,7 +74,7 @@ class SaasInvoice(Base):
     kind: Mapped[str] = mapped_column(String(12), default="subscription")  # subscription | setup | sms | credits
     period: Mapped[str] = mapped_column(String(8), default="")             # 2026-10, or 2026 for yearly
     description: Mapped[str] = mapped_column(String(200), default="")
-    amount: Mapped[int] = mapped_column(Integer)                           # paisa
+    amount: Mapped[int] = mapped_column(BigInteger)                           # paisa
     status: Mapped[str] = mapped_column(String(10), default="issued", index=True)  # issued | paid | void
     issued_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
     due_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
@@ -83,7 +83,7 @@ class SaasInvoice(Base):
     trx_id: Mapped[str] = mapped_column(String(40), default="")
     items: Mapped[list] = mapped_column(JSON, default=list)               # M19 credit purchases: [{kind, name, name_bn, credits, amount}]
     vat_bps: Mapped[int] = mapped_column(Integer, default=0)               # M19: VAT rate in basis points at the time of sale
-    vat_amount: Mapped[int] = mapped_column(Integer, default=0)            # M19: paisa, included in amount
+    vat_amount: Mapped[int] = mapped_column(BigInteger, default=0)            # M19: paisa, included in amount
 
 
 class SmsLedger(Base):
@@ -114,3 +114,18 @@ class FeatureOverride(Base):
     org_id: Mapped[int] = mapped_column(ForeignKey("organizations.id"), index=True)
     key: Mapped[str] = mapped_column(String(30))
     enabled: Mapped[bool] = mapped_column(default=True)
+
+
+class CancellationRequest(Base):
+    """A building's request to end its subscription (raised from the Plan page), approved or rejected by FlatWise.
+    A SaaS admin can also end a subscription directly; that is recorded here as an approved row with no requester."""
+    __tablename__ = "cancellation_requests"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    org_id: Mapped[int] = mapped_column(ForeignKey("organizations.id"), index=True)
+    requested_by: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    reason: Mapped[str] = mapped_column(Text, default="")
+    status: Mapped[str] = mapped_column(String(10), default="pending", index=True)  # pending | approved | rejected | withdrawn
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    decided_by: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    decision_note: Mapped[str] = mapped_column(Text, default="")

@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Btn, Card, Chip, DataTable, Field, Modal, PageHead, Stat, Tabs, useToast } from "@/components/ui";
 import { Avatar } from "@/components/Avatar";
+import { PhotoPick, uploadPhotoFor } from "@/components/AvatarUploader";
 import { ProfileModal } from "@/components/ProfilePanel";
 import { DutyStrip } from "@/components/DutyStrip";
 import { api, fdate, ftime, money } from "@/lib/api";
@@ -26,7 +27,7 @@ export default function Staff() {
   const agencies = Array.from(new Map(rows.filter((r) => r.agency).map((r) => [r.agency!.agency_id, r.agency!])).values());
   const shown = rows.filter((r) => emp === "all" || (emp === "direct" ? !r.agency : r.agency?.agency_id === +emp));
   return (<>
-    <PageHead title={t("staff.title")} sub={t("staff.sub")} actions={tab === "people" ? (edit && <Btn onClick={() => setForm({ role: "guard" })}>{t("staff.add")}</Btn>) : (prepare && <Btn onClick={() => setNewSheet(true)}>{t("pay.sheet_new")}</Btn>)} />
+    <PageHead helpKey="staff-registry" title={t("staff.title")} sub={t("staff.sub")} actions={tab === "people" ? (edit && <Btn onClick={() => setForm({ role: "guard" })}>{t("staff.add")}</Btn>) : (prepare && <Btn onClick={() => setNewSheet(true)}>{t("pay.sheet_new")}</Btn>)} />
     <div style={{ marginBottom: 16 }}><Tabs value={tab} onChange={(v) => { setTab(v); setOpen(null); }} items={[{ id: "people", label: `${t("staff.tab.people")} · ${active.length}` }, { id: "payroll", label: t("staff.tab.payroll") }]} /></div>
 
     {tab === "people" && (<div className="stack"><div className="grid g3"><Stat label={t("staff.tab.people")} value={active.length} /><Stat label={t("staff.total_pay")} value={money(active.reduce((a, r) => a + r.salary, 0))} /></div>
@@ -77,14 +78,23 @@ function LineModal({ l, onClose, onDone }: { l: Ln; onClose: () => void; onDone:
     <Field label={t("pay.note")}><input className="input" value={n} onChange={(e) => setN(e.target.value)} /></Field>{err && <p className="error">{err}</p>}<div className="row"><Btn onClick={go}>{t("common.save")}</Btn><Btn variant="ghost" onClick={onClose}>{t("common.cancel")}</Btn></div></Modal>;
 }
 function StaffForm({ s, onClose, onDone, onLeave }: { s: Partial<S>; onClose: () => void; onDone: () => void; onLeave: (id: number) => void }) {
-  const { t } = useT(); const [f, setF] = useState({ name: s.name ?? "", name_bn: s.name_bn ?? "", role: s.role ?? "guard", phone: s.phone ?? "", salary: String((s.salary ?? 0) / 100), nid: "" }); const [err, setErr] = useState("");
+  const { t } = useT(); const [f, setF] = useState({ name: s.name ?? "", name_bn: s.name_bn ?? "", role: s.role ?? "guard", phone: s.phone ?? "", salary: String((s.salary ?? 0) / 100), nid: "" }); const [err, setErr] = useState(""); const [photo, setPhoto] = useState<File | null>(null); const [busy, setBusy] = useState(false);
   const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setF({ ...f, [k]: e.target.value });
-  const go = async () => { try { const body = { ...f, salary: Math.round(+f.salary * 100) }; await api(s.id ? `/staff/${s.id}` : "/staff", { method: s.id ? "PUT" : "POST", body }); onDone(); } catch (e: any) { setErr(e.message); } };
+  const go = async () => {
+    setBusy(true);
+    try {
+      const body = { ...f, salary: Math.round(+f.salary * 100) };
+      const r = await api(s.id ? `/staff/${s.id}` : "/staff", { method: s.id ? "PUT" : "POST", body });
+      if (photo) { const m = await uploadPhotoFor("staff", s.id ?? r.id, photo); if (m) window.alert(`${t("prof.photo")}: ${m}`); }
+      onDone();
+    } catch (e: any) { setErr(e.message); setBusy(false); }
+  };
   return <Modal title={s.id ? t("staff.edit") : t("staff.add")} onClose={onClose}>
+    <PhotoPick file={photo} onFile={setPhoto} name={f.name} />
     <Field label={t("staff.name")}><input className="input" value={f.name} onChange={set("name")} /></Field><Field label={t("staff.name_bn")}><input className="input" value={f.name_bn} onChange={set("name_bn")} /></Field>
     <div className="grid g2"><Field label={t("staff.role")}><select className="input" value={f.role} onChange={set("role")}>{ROLES.map((r) => <option key={r} value={r}>{t(`staff.role.${r}`)}</option>)}</select></Field><Field label={t("staff.phone")}><input className="input" inputMode="tel" value={f.phone} onChange={set("phone")} /></Field>
       <Field label={t("staff.salary")}><input className="input" inputMode="decimal" value={f.salary} onChange={set("salary")} /></Field><Field label={t("staff.nid")} hint={t("staff.nid_hint")}><input className="input" inputMode="numeric" value={f.nid} onChange={set("nid")} /></Field></div>
-    {err && <p className="error" role="alert">{err}</p>}<div className="row between"><div className="row"><Btn onClick={go} disabled={f.name.trim().length < 2}>{t("common.save")}</Btn><Btn variant="ghost" onClick={onClose}>{t("common.cancel")}</Btn></div>{s.id && <Btn variant="danger" onClick={() => confirm(t("staff.leave_confirm", { n: s.name ?? "" })) && onLeave(s.id!)}>{t("staff.leave")}</Btn>}</div></Modal>;
+    {err && <p className="error" role="alert">{err}</p>}<div className="row between"><div className="row"><Btn onClick={go} disabled={busy || f.name.trim().length < 2}>{t("common.save")}</Btn><Btn variant="ghost" onClick={onClose}>{t("common.cancel")}</Btn></div>{s.id && <Btn variant="danger" onClick={() => confirm(t("staff.leave_confirm", { n: s.name ?? "" })) && onLeave(s.id!)}>{t("staff.leave")}</Btn>}</div></Modal>;
 }
 function NidModal({ s, onClose }: { s: S; onClose: () => void }) {
   const { t } = useT(); const [full, setFull] = useState(""); const [views, setViews] = useState<{ viewer: string; at: string }[]>([]);

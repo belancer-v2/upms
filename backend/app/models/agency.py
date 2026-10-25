@@ -1,7 +1,7 @@
 """M18: outsourced security and cleaning agencies, who they supply, posts, shifts, the duty roster, attendance and monthly bill checks. Money is integer paisa."""
 from datetime import date, datetime
 
-from sqlalchemy import JSON, Boolean, Date, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy import BigInteger, Boolean, Date, DateTime, ForeignKey, Integer, JSON, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from ..db import Base
@@ -25,7 +25,7 @@ class Agency(Base):
     contract_start: Mapped[date | None] = mapped_column(Date, nullable=True)
     contract_end: Mapped[date | None] = mapped_column(Date, nullable=True)
     fee_mode: Mapped[str] = mapped_column(String(10), default="flat")        # flat (monthly) | per_post (per post per month)
-    monthly_fee: Mapped[int] = mapped_column(Integer, default=0)             # paisa
+    monthly_fee: Mapped[int] = mapped_column(BigInteger, default=0)             # paisa
     notice_days: Mapped[int] = mapped_column(Integer, default=30)
     sla_notes: Mapped[str] = mapped_column(Text, default="")
     status: Mapped[str] = mapped_column(String(8), default="active")         # active | ended
@@ -120,7 +120,7 @@ class AgencySetting(Base):
     __tablename__ = "agency_settings"
     id: Mapped[int] = mapped_column(primary_key=True)
     property_id: Mapped[int] = mapped_column(ForeignKey("properties.id"), unique=True)
-    shortfall_rate: Mapped[int] = mapped_column(Integer, default=40000)     # paisa deducted for each missing person-shift
+    shortfall_rate: Mapped[int] = mapped_column(BigInteger, default=40000)     # paisa deducted for each missing person-shift
 
 
 class AgencyBill(Base):
@@ -131,10 +131,10 @@ class AgencyBill(Base):
     agency_id: Mapped[int] = mapped_column(ForeignKey("agencies.id"), index=True)
     period: Mapped[str] = mapped_column(String(7))
     number: Mapped[str] = mapped_column(String(60))
-    amount: Mapped[int] = mapped_column(Integer)           # invoiced, paisa
+    amount: Mapped[int] = mapped_column(BigInteger)           # invoiced, paisa
     expected: Mapped[int] = mapped_column(Integer)         # computed when recorded
     shortfall_units: Mapped[int] = mapped_column(Integer, default=0)
-    deduction: Mapped[int] = mapped_column(Integer, default=0)
+    deduction: Mapped[int] = mapped_column(BigInteger, default=0)
     note: Mapped[str] = mapped_column(String(200), default="")
     expense_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
     created_by: Mapped[int] = mapped_column(Integer)

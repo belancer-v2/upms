@@ -31,7 +31,7 @@ export default function InvoiceSettings() {
   };
   return (
     <>
-      <PageHead title={t("set.title")} sub={can ? t("set.sub") : t("set.readonly")} actions={can ? <Btn onClick={save}>{t("common.save")}</Btn> : undefined} />
+      <PageHead helpKey="saas-invoices" title={t("set.title")} sub={can ? t("set.sub") : t("set.readonly")} actions={can ? <Btn onClick={save}>{t("common.save")}</Btn> : undefined} />
       <div className="grid g2" style={{ alignItems: "start" }}>
         <Card><h3>{t("set.company")}</h3><div className="stack" style={{ marginTop: 12 }}>
           {text("legal_name", t("set.legal_name"))}{text("legal_name_bn", t("set.legal_name_bn"))}{text("address", t("set.address"))}{text("address_bn", t("set.address_bn"))}
